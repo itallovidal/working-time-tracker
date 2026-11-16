@@ -82,10 +82,10 @@ Todas pedem que a pessoa esteja no projeto.
 |---|---|
 | `/projects/:id` | Leva ao Início do projeto |
 | `/projects/:id/overview` | Início do projeto, igual para todos: o painel do timer, as suas tarefas, o seu tempo de hoje e da semana e as suas sessões, com filtros e páginas |
-| `/projects/:id/my-tasks` | Minhas tarefas: o painel do timer e as tarefas de que a pessoa é responsável, uma lista por status. No modo solo leva (303) a `/projects/:id/tasks` |
-| `/projects/:id/tasks` | Lista de tarefas: as sem responsável e as de outras pessoas, cada lista com a sua paginação. A linha abre a tarefa. No modo solo é a aba **Tarefas** ([Decisão 28](../architecture/decisions.md)): o painel do timer e todas as tarefas do projeto, uma lista por status, cada uma com a sua paginação e o botão Iniciar |
+| `/projects/:id/my-tasks` | Minhas tarefas: o painel do timer e as tarefas de que a pessoa é uma das responsáveis (inclusive as divididas), uma lista por status. No modo solo leva (303) a `/projects/:id/tasks` |
+| `/projects/:id/tasks` | Lista de tarefas: as sem responsável e as com responsável em que a pessoa não está, cada lista com a sua paginação. A linha abre a tarefa. No modo solo é a aba **Tarefas** ([Decisão 28](../architecture/decisions.md)): o painel do timer e todas as tarefas do projeto, uma lista por status, cada uma com a sua paginação e o botão Iniciar |
 | `/projects/:id/collaborators` | Colaboradores, só para ler: pessoas e times, sem valores nem ações. Para os admins, a coluna Agora. Não existe no modo solo |
-| `/tasks/:taskId` | A página da tarefa, sem as abas do projeto: nome e descrição, detalhes, tempo registrado, um cartão por item externo, publicar nas integrações e excluir |
+| `/tasks/:taskId` | A página da tarefa, sem as abas do projeto: nome e descrição, detalhes (com uma linha por responsável, Acrescentar pessoas e Sair da tarefa), tempo registrado, um cartão por item externo, publicar nas integrações e excluir |
 
 **A lista de tarefas guarda o estado na URL:** `?q=`, `?assignee=` (só para a lista Com responsável), `?due=`,
 `?priority=`, `?status=`, `?label=` (os três últimos separados por vírgula) e `?free_page=` e `?taken_page=`. A aba

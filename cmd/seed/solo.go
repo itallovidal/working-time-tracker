@@ -365,12 +365,12 @@ func seedSolo(ctx context.Context, db *database.DB, now time.Time) soloSummary {
 			ids = append(ids, labelID[t.project+"/"+l])
 		}
 		priority := priorityFor(t.deadlineDays)
-		created, err := taskSvc.CreateAs(ownerID, prj.id, t.name, t.description, ownerID, &deadline,
+		created, err := taskSvc.CreateAs(task.Actor{ID: ownerID}, prj.id, t.name, t.description, ownerID, &deadline,
 			task.Attrs{Priority: &priority, LabelIDs: &ids})
 		must(err)
 		if t.status != task.StatusBacklog {
 			status := t.status
-			created, err = taskSvc.UpdateAs(ownerID, created.ID.String(), created.Name, created.Description, nil, nil, task.Attrs{Status: &status})
+			created, err = taskSvc.UpdateAs(task.Actor{ID: ownerID}, created.ID.String(), created.Name, created.Description, nil, nil, task.Attrs{Status: &status})
 			must(err)
 		}
 		if t.link != "" {

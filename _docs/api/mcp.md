@@ -142,7 +142,8 @@ O código está em `internal/oauth` (o protocolo) e em `internal/domain/auth/oau
   outro `Host`, contra DNS rebinding. Um nginx ou um túnel na mesma máquina que repassa para `localhost` cai nisso; no
   Render, no Railway e no Fly.io o pedido chega pela rede do container, e não acontece.
 - **Erros:** uma ferramenta que falha devolve um resultado com `isError` e o texto do erro em inglês, com o código
-  estável entre parênteses e os parâmetros (`this task already has an assignee (task.already_assigned)`). Alguns trazem
+  estável entre parênteses e os parâmetros (`this task already has an assignee: ask someone on it to add you
+  (task.already_assigned)`). Alguns trazem
   uma dica do que fazer: o ponto que já está aberto no projeto diz o que roda nele e sugere `add_task_to_session`, e o
   `clock_out` sem projeto, com sessões abertas em mais de um, lista os projetos (`mcp.project_required`). Os
   códigos são os da API, mais os `mcp.*` de [errors.md](errors.md).
@@ -165,8 +166,9 @@ tela.
 | `whoami` | A pessoa, o cargo, a organização (com o fuso), as sessões de ponto abertas (`open_sessions`) e quando o token vence |
 | `list_projects` | Os projetos em que a pessoa está (todos, para admin) |
 | `list_labels` | As etiquetas de um projeto, pelo nome |
-| `list_tasks` | As tarefas de um projeto, por página, com busca, status, prioridade, responsável (`me`, `none`, `any`, `others`) e etiquetas. Sem status, só as abertas |
-| `my_tasks` | As tarefas da pessoa em todos os projetos, abertas (por prazo) ou fechadas |
+| `list_people` | As pessoas de um projeto (`id`, `name`, `email`, `is_you`), as que podem ser responsáveis pelas tarefas dele: são os ids que `create_task` e `update_task` recebem |
+| `list_tasks` | As tarefas de um projeto, por página, com busca, status, prioridade, responsável (`me`, `none`, `any`, `others`: "está entre os responsáveis") e etiquetas. Sem status, só as abertas. Cada tarefa traz `assignees` (`[{id, name, is_you}]`, vazio na tarefa livre) |
+| `my_tasks` | As tarefas da pessoa em todos os projetos, abertas (por prazo) ou fechadas, inclusive as que ela divide com outras pessoas |
 | `find_tasks` | Acha tarefas em todos os projetos que a pessoa alcança (ou num só, com `project_id`): pela issue do GitHub ou do GitLab ou pelo cartão do Trello ligado a elas (`issue`: a URL, com ou sem `https://`, ou `owner/repo#12`; o mesmo número em outro repositório não entra), por palavras que precisam aparecer, cada uma, no nome ou na descrição (`query`), ou pelos dois. Sem status, todos; filtra também por responsável, por página. Cada tarefa traz o `project` |
 | `get_task` | Uma tarefa, com a descrição em Markdown e os itens ligados (GitHub, Trello…) |
 | `get_active_session` | As sessões abertas (`sessions`), uma por projeto no máximo, com o trecho de cada tarefa e qual está rodando |
@@ -176,14 +178,14 @@ tela.
 
 | Ferramenta | O que faz |
 |---|---|
-| `create_task` | Cria a tarefa (nome, descrição, prioridade, prazo, etiquetas pelo nome, e `assign_to_me`). Nasce em backlog; sem prazo, o prazo é daqui a 7 dias, como na API; a publicação automática das integrações vale como na tela |
-| `update_task` | Muda só o que vem: nome, descrição, status, prioridade, prazo (ou `clear_deadline`), etiquetas e responsável (`me` ou `none`). Nas etiquetas, `add_labels` e `remove_labels` põem e tiram algumas e mantêm as outras; `labels` troca todas (os dois juntos: `mcp.labels_conflict`). Numa tarefa sincronizada, a mudança vai à plataforma |
+| `create_task` | Cria a tarefa (nome, descrição, prioridade, prazo, etiquetas pelo nome, e `assign_to_me` ou `assignees`: `me` ou ids de `list_people`; outras pessoas só para o admin do projeto, como na API). Nasce em backlog; sem prazo, o prazo é daqui a 7 dias, como na API; a publicação automática das integrações vale como na tela |
+| `update_task` | Muda só o que vem: nome, descrição, status, prioridade, prazo (ou `clear_deadline`), etiquetas e responsáveis. Nas etiquetas, `add_labels` e `remove_labels` põem e tiram algumas e mantêm as outras; `labels` troca todas (os dois juntos: `mcp.labels_conflict`). Nos responsáveis, `add_assignees` e `remove_assignees` (`me` ou ids de pessoas) põem e tiram algumas e mantêm as outras, com as regras da API ([permissões](../product/permissions.md#responsáveis-da-tarefa)): `add_assignees: ["me"]` pega a tarefa livre, e numa com gente é `task.already_assigned`; um responsável acrescenta outras pessoas; `remove_assignees: ["me"]` é sair, e tirar outra pessoa é do admin do projeto (`task.remove_forbidden`). Quem sai com o ponto aberto na tarefa tem o trecho parado. Numa tarefa sincronizada, a mudança vai à plataforma |
 | `create_label` | Cria uma etiqueta no projeto, para quem tem `labels.manage` nele (o dono, os admins e o grupo de gerente), como a rota da API; sem ela, `auth.permission_required`. Um nome que o projeto já tem, sem diferenciar maiúsculas, volta com `created: false` |
-| `claim_task` | Pega a tarefa sem responsável, sem bater o ponto. A de outra pessoa é recusada, e a que exige uma conta (`required_accounts`) que a pessoa não ligou também (`task.account_required`: o texto pede para conectar a conta no perfil) |
+| `claim_task` | Pega a tarefa livre, sem bater o ponto. A que já tem gente é recusada (quem está nela, ou o admin do projeto, acrescenta a pessoa com `add_assignees`), e a que exige uma conta (`required_accounts`) que a pessoa não ligou também (`task.account_required`: o texto pede para conectar a conta no perfil) |
 | `sync_task` | Sincroniza agora a tarefa com os itens ligados a ela, nos dois sentidos (o botão Sincronizar da tarefa) |
 | `sync_project` | Sincroniza agora o projeto inteiro, como o botão Sincronizar da lista de tarefas: uma rodada em cada integração com a sincronização ligada. Os itens abertos que ainda não estão aqui viram tarefas, e os ligados se atualizam; os fechados não entram, e uma tarefa apagada aqui não volta. Qualquer pessoa do projeto pode pedir. Sem integração sincronizando, `mcp.project_sync_off` diz onde ligar |
-| `clock_in` | Abre o ponto numa tarefa, numa sessão do projeto dela; as sessões de outros projetos continuam. Ela passa a em progresso e, sem responsável, vira da pessoa |
-| `add_task_to_session` | Põe a tarefa na sessão aberta do projeto dela, a partir de agora. Com `switch`, encerra os outros trechos ativos daquela sessão: é trocar de tarefa |
+| `clock_in` | Abre o ponto numa tarefa, numa sessão do projeto dela; as sessões de outros projetos continuam. Ela passa a em progresso e, sem responsável, vira da pessoa. Só numa tarefa de que a pessoa é responsável, ou numa livre: na de outra pessoa, `work_session.not_assignee` |
+| `add_task_to_session` | Põe a tarefa na sessão aberta do projeto dela, a partir de agora, com a mesma regra do `clock_in` (as suas tarefas ou uma livre). Com `switch`, encerra os outros trechos ativos daquela sessão: é trocar de tarefa |
 | `stop_session_task` | Encerra agora o trecho de uma tarefa na sessão do projeto dela; as horas ficam |
 | `remove_session_task` | Tira a tarefa da sessão do projeto dela, com o trecho dela |
 | `clock_out` | Encerra o ponto de um projeto. `project_id` só é preciso com sessões abertas em mais de um projeto |
@@ -202,7 +204,8 @@ tela.
   (`mcp.unknown_label`) com a lista das que existem e a lembrança de que quem tem `labels.manage` a cria com
   `create_label`.
 - O `initialize` devolve instruções curtas sobre o sistema (uma sessão por pessoa em cada projeto, como trocar de
-  tarefa, os status e as prioridades), e as ferramentas de leitura vêm marcadas como só leitura.
+  tarefa, que o ponto só corre nas tarefas da pessoa ou numa livre, os status e as prioridades), e as ferramentas de
+  leitura vêm marcadas como só leitura.
 
 ## Fora do MCP
 
@@ -210,5 +213,5 @@ Ainda não estão no MCP:
 
 - **Outros clientes MCP** (ChatGPT, Cursor e afins): o OAuth aceita só os apps do Claude
   ([issue #36](https://github.com/itallovidal/working-time-tracker/issues/36)).
-- Publicar uma tarefa numa plataforma, excluir tarefa, renomear ou excluir etiqueta, atribuir a outra pessoa, o ponto
-  de outra pessoa e tudo o que é dinheiro.
+- Publicar uma tarefa numa plataforma, excluir tarefa, renomear ou excluir etiqueta, o ponto de outra pessoa e tudo o
+  que é dinheiro.

@@ -111,26 +111,6 @@ func (_u *TaskUpdate) SetNillableStatus(v *task.Status) *TaskUpdate {
 	return _u
 }
 
-// SetAssigneeID sets the "assignee_id" field.
-func (_u *TaskUpdate) SetAssigneeID(v uuid.UUID) *TaskUpdate {
-	_u.mutation.SetAssigneeID(v)
-	return _u
-}
-
-// SetNillableAssigneeID sets the "assignee_id" field if the given value is not nil.
-func (_u *TaskUpdate) SetNillableAssigneeID(v *uuid.UUID) *TaskUpdate {
-	if v != nil {
-		_u.SetAssigneeID(*v)
-	}
-	return _u
-}
-
-// ClearAssigneeID clears the value of the "assignee_id" field.
-func (_u *TaskUpdate) ClearAssigneeID() *TaskUpdate {
-	_u.mutation.ClearAssigneeID()
-	return _u
-}
-
 // SetDeadline sets the "deadline" field.
 func (_u *TaskUpdate) SetDeadline(v time.Time) *TaskUpdate {
 	_u.mutation.SetDeadline(v)
@@ -174,9 +154,19 @@ func (_u *TaskUpdate) SetProject(v *Project) *TaskUpdate {
 	return _u.SetProjectID(v.ID)
 }
 
-// SetAssignee sets the "assignee" edge to the Person entity.
-func (_u *TaskUpdate) SetAssignee(v *Person) *TaskUpdate {
-	return _u.SetAssigneeID(v.ID)
+// AddAssigneeIDs adds the "assignees" edge to the Person entity by IDs.
+func (_u *TaskUpdate) AddAssigneeIDs(ids ...uuid.UUID) *TaskUpdate {
+	_u.mutation.AddAssigneeIDs(ids...)
+	return _u
+}
+
+// AddAssignees adds the "assignees" edges to the Person entity.
+func (_u *TaskUpdate) AddAssignees(v ...*Person) *TaskUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAssigneeIDs(ids...)
 }
 
 // AddSessionLinkIDs adds the "session_links" edge to the WorkSessionTask entity by IDs.
@@ -235,10 +225,25 @@ func (_u *TaskUpdate) ClearProject() *TaskUpdate {
 	return _u
 }
 
-// ClearAssignee clears the "assignee" edge to the Person entity.
-func (_u *TaskUpdate) ClearAssignee() *TaskUpdate {
-	_u.mutation.ClearAssignee()
+// ClearAssignees clears all "assignees" edges to the Person entity.
+func (_u *TaskUpdate) ClearAssignees() *TaskUpdate {
+	_u.mutation.ClearAssignees()
 	return _u
+}
+
+// RemoveAssigneeIDs removes the "assignees" edge to Person entities by IDs.
+func (_u *TaskUpdate) RemoveAssigneeIDs(ids ...uuid.UUID) *TaskUpdate {
+	_u.mutation.RemoveAssigneeIDs(ids...)
+	return _u
+}
+
+// RemoveAssignees removes "assignees" edges to Person entities.
+func (_u *TaskUpdate) RemoveAssignees(v ...*Person) *TaskUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAssigneeIDs(ids...)
 }
 
 // ClearSessionLinks clears all "session_links" edges to the WorkSessionTask entity.
@@ -422,12 +427,12 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.AssigneeCleared() {
+	if _u.mutation.AssigneesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   task.AssigneeTable,
-			Columns: []string{task.AssigneeColumn},
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.AssigneesTable,
+			Columns: task.AssigneesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),
@@ -435,12 +440,28 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.AssigneeIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RemovedAssigneesIDs(); len(nodes) > 0 && !_u.mutation.AssigneesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   task.AssigneeTable,
-			Columns: []string{task.AssigneeColumn},
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.AssigneesTable,
+			Columns: task.AssigneesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AssigneesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.AssigneesTable,
+			Columns: task.AssigneesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),
@@ -682,26 +703,6 @@ func (_u *TaskUpdateOne) SetNillableStatus(v *task.Status) *TaskUpdateOne {
 	return _u
 }
 
-// SetAssigneeID sets the "assignee_id" field.
-func (_u *TaskUpdateOne) SetAssigneeID(v uuid.UUID) *TaskUpdateOne {
-	_u.mutation.SetAssigneeID(v)
-	return _u
-}
-
-// SetNillableAssigneeID sets the "assignee_id" field if the given value is not nil.
-func (_u *TaskUpdateOne) SetNillableAssigneeID(v *uuid.UUID) *TaskUpdateOne {
-	if v != nil {
-		_u.SetAssigneeID(*v)
-	}
-	return _u
-}
-
-// ClearAssigneeID clears the value of the "assignee_id" field.
-func (_u *TaskUpdateOne) ClearAssigneeID() *TaskUpdateOne {
-	_u.mutation.ClearAssigneeID()
-	return _u
-}
-
 // SetDeadline sets the "deadline" field.
 func (_u *TaskUpdateOne) SetDeadline(v time.Time) *TaskUpdateOne {
 	_u.mutation.SetDeadline(v)
@@ -745,9 +746,19 @@ func (_u *TaskUpdateOne) SetProject(v *Project) *TaskUpdateOne {
 	return _u.SetProjectID(v.ID)
 }
 
-// SetAssignee sets the "assignee" edge to the Person entity.
-func (_u *TaskUpdateOne) SetAssignee(v *Person) *TaskUpdateOne {
-	return _u.SetAssigneeID(v.ID)
+// AddAssigneeIDs adds the "assignees" edge to the Person entity by IDs.
+func (_u *TaskUpdateOne) AddAssigneeIDs(ids ...uuid.UUID) *TaskUpdateOne {
+	_u.mutation.AddAssigneeIDs(ids...)
+	return _u
+}
+
+// AddAssignees adds the "assignees" edges to the Person entity.
+func (_u *TaskUpdateOne) AddAssignees(v ...*Person) *TaskUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAssigneeIDs(ids...)
 }
 
 // AddSessionLinkIDs adds the "session_links" edge to the WorkSessionTask entity by IDs.
@@ -806,10 +817,25 @@ func (_u *TaskUpdateOne) ClearProject() *TaskUpdateOne {
 	return _u
 }
 
-// ClearAssignee clears the "assignee" edge to the Person entity.
-func (_u *TaskUpdateOne) ClearAssignee() *TaskUpdateOne {
-	_u.mutation.ClearAssignee()
+// ClearAssignees clears all "assignees" edges to the Person entity.
+func (_u *TaskUpdateOne) ClearAssignees() *TaskUpdateOne {
+	_u.mutation.ClearAssignees()
 	return _u
+}
+
+// RemoveAssigneeIDs removes the "assignees" edge to Person entities by IDs.
+func (_u *TaskUpdateOne) RemoveAssigneeIDs(ids ...uuid.UUID) *TaskUpdateOne {
+	_u.mutation.RemoveAssigneeIDs(ids...)
+	return _u
+}
+
+// RemoveAssignees removes "assignees" edges to Person entities.
+func (_u *TaskUpdateOne) RemoveAssignees(v ...*Person) *TaskUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAssigneeIDs(ids...)
 }
 
 // ClearSessionLinks clears all "session_links" edges to the WorkSessionTask entity.
@@ -1023,12 +1049,12 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.AssigneeCleared() {
+	if _u.mutation.AssigneesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   task.AssigneeTable,
-			Columns: []string{task.AssigneeColumn},
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.AssigneesTable,
+			Columns: task.AssigneesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),
@@ -1036,12 +1062,28 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.AssigneeIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RemovedAssigneesIDs(); len(nodes) > 0 && !_u.mutation.AssigneesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   task.AssigneeTable,
-			Columns: []string{task.AssigneeColumn},
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.AssigneesTable,
+			Columns: task.AssigneesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AssigneesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   task.AssigneesTable,
+			Columns: task.AssigneesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(person.FieldID, field.TypeUUID),

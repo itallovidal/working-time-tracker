@@ -168,7 +168,7 @@ func TestService_Remove(t *testing.T) {
 	if other, _ := f.svc.ListByProject(f.projectY); len(other) != 1 || describe(other[0]) != "Ana: rate 11000, teams [Backend Y]" {
 		t.Errorf("collaborators of Y after removing Ana from X = %+v, want her untouched", other)
 	}
-	if still, err := f.taskSvc.Get(tk.ID.String()); err != nil || still.AssigneeID.String() != f.ana {
+	if still, err := f.taskSvc.Get(tk.ID.String()); err != nil || !still.HasAssignee(uuid.MustParse(f.ana)) {
 		t.Errorf("task after removal: %+v, err %v; want it still assigned to Ana", still, err)
 	}
 	if n := testClient.WorkSession.Query().CountX(ctx); n != 1 {

@@ -82,6 +82,31 @@ As regras de cada valor e de cada pagamento estão em [money.md](money.md).
 A jornada é da pessoa (vale na organização inteira); o que varia por projeto é o custo. Por isso o administrador de
 projeto vê a jornada e não a define: definir vai além do projeto dele.
 
+## Responsáveis da tarefa
+
+Uma tarefa tem até 10 responsáveis, ou nenhum (a tarefa livre). Quem mexe na lista
+([Decisão 31](../architecture/decisions.md)), sendo "admin do projeto" quem tem `collaborators.manage` nele (o dono, os
+admins e o administrador de projeto):
+
+- **Numa tarefa livre**, só o admin do projeto põe outra pessoa. Os outros só a pegam para si: Pegar, criar a tarefa já
+  para si ou bater o ponto nela.
+- **Numa tarefa com gente**, um responsável acrescenta outras pessoas do projeto, e o admin do projeto também. Quem não
+  está nela não entra sozinho (`409 task.already_assigned`): alguém dela o acrescenta.
+- **Tirar:** o responsável só sai ele mesmo; tirar outra pessoa é do admin do projeto. Quando o último sai, a tarefa
+  volta a ser livre.
+- Sem poder, a API responde `403 task.share_forbidden` (pôr) ou `403 task.remove_forbidden` (tirar).
+- Quem entra precisa estar no projeto e ter as contas que a tarefa exige (`required_accounts`); ligar a trava não tira
+  ninguém.
+- Os outros campos da tarefa (nome, descrição, status, prioridade, prazo e etiquetas) qualquer pessoa do projeto muda.
+
+**O ponto só nas suas tarefas.** Bater o ponto, ou pôr uma tarefa numa sessão (aberta ou encerrada), só vale numa
+tarefa de que a pessoa é responsável, ou numa livre, que passa a ser dela. Na tarefa de outra pessoa, a resposta é
+`403 work_session.not_assignee`. Cada responsável bate o seu ponto, e as horas e os valores ficam na sessão de quem
+bateu. Quem sai da tarefa, ou é tirado dela, com o ponto aberto nela tem o trecho parado na hora; se era a única tarefa
+rodando na sessão, a sessão fecha.
+
+No modo solo a pessoa é uma só, e a tela não mostra a lista.
+
 ## Modo solo
 
 Numa organização no [modo solo](overview.md#modo-solo) o dono é a única pessoa, e as páginas de equipe não se abrem para
@@ -148,7 +173,7 @@ lista, mas o array `permissions` só vai para a própria pessoa, o dono e os adm
 | `project.edit` | Alterar o projeto (nome, descrição, sprint, daily, weekly e a reunião com o cliente) e abrir a aba Configurações |
 | `project.delete` | Excluir o projeto, com as horas e os valores dele. Não está no grupo administrador de projeto: só o dono, os admins e o grupo `admin` |
 | `teams.manage` | Criar, editar e excluir times, e escolher quem está em cada um |
-| `collaborators.manage` | Pôr e tirar pessoas do projeto, convidar para ele e escolher o grupo delas |
+| `collaborators.manage` | Pôr e tirar pessoas do projeto, convidar para ele e escolher o grupo delas. Nas tarefas, pôr e tirar qualquer pessoa da lista de responsáveis ([Responsáveis da tarefa](#responsáveis-da-tarefa)) |
 | `rates.view` | Ver o valor pago aos colegas e as horas de todos |
 | `rates.manage` | Definir o valor por hora de uma pessoa no projeto (mínimo 10,00; só o dono entra com 0) |
 | `billing.view` | Ver o cliente, o valor cobrado, a receita e a margem na Visão geral |
@@ -201,7 +226,9 @@ faturamento que ele não vê. O dono dá qualquer um; o admin, só os que cabem 
 | `DELETE /projects/:id/collaborators/:personId` | `collaborators.manage` |
 | `POST /projects/:id/invites`, `GET /projects/:id/invites` | `collaborators.manage` (e `rates.manage` para convidar com valor): o administrador de projeto convida para o projeto dele |
 | `GET /projects/:id/allocations`, `GET /projects/:id/collaborators` | todos; o valor dos colegas só com `rates.view` ou `rates.manage` |
-| `POST`/`PATCH`/`DELETE /projects/:id/work-sessions/:sessionId/tasks…` | só quem bateu o ponto e os admins: mudar as tarefas não muda o tempo nem os valores da sessão, então não há permissão própria |
+| `POST /projects/:id/tasks`, `PATCH /tasks/:id`, `PATCH /tasks/:id/attributes` | todos; na lista de responsáveis (`assignee_ids`), pôr outra pessoa numa tarefa livre e tirar outra pessoa pedem `collaborators.manage` ([Responsáveis da tarefa](#responsáveis-da-tarefa)) |
+| `POST /projects/:id/work-sessions/clock-in` | todos, numa tarefa de que a pessoa é responsável ou numa livre (`403 work_session.not_assignee` fora disso); o ponto de outra pessoa, só os admins |
+| `POST`/`PATCH`/`DELETE /projects/:id/work-sessions/:sessionId/tasks…` | só quem bateu o ponto e os admins: mudar as tarefas não muda o tempo nem os valores da sessão, então não há permissão própria. A tarefa que entra precisa ser da pessoa da sessão, ou livre (`403 work_session.not_assignee`) |
 | `GET /projects/:id/work-sessions`, `.../total` | todos; as sessões dos colegas só com alguma permissão do projeto, e o valor cobrado só com `billing.view` |
 | `POST`/`PATCH`/`DELETE /projects/:id/labels` | `labels.manage` |
 | `POST /projects/:id/integrations`, `PATCH`/`DELETE /integrations/:id` | `integrations.manage` |

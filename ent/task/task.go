@@ -26,8 +26,6 @@ const (
 	FieldPriority = "priority"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
-	// FieldAssigneeID holds the string denoting the assignee_id field in the database.
-	FieldAssigneeID = "assignee_id"
 	// FieldDeadline holds the string denoting the deadline field in the database.
 	FieldDeadline = "deadline"
 	// FieldRequiredAccounts holds the string denoting the required_accounts field in the database.
@@ -36,8 +34,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// EdgeProject holds the string denoting the project edge name in mutations.
 	EdgeProject = "project"
-	// EdgeAssignee holds the string denoting the assignee edge name in mutations.
-	EdgeAssignee = "assignee"
+	// EdgeAssignees holds the string denoting the assignees edge name in mutations.
+	EdgeAssignees = "assignees"
 	// EdgeSessionLinks holds the string denoting the session_links edge name in mutations.
 	EdgeSessionLinks = "session_links"
 	// EdgeLabels holds the string denoting the labels edge name in mutations.
@@ -53,13 +51,11 @@ const (
 	ProjectInverseTable = "projects"
 	// ProjectColumn is the table column denoting the project relation/edge.
 	ProjectColumn = "project_id"
-	// AssigneeTable is the table that holds the assignee relation/edge.
-	AssigneeTable = "tasks"
-	// AssigneeInverseTable is the table name for the Person entity.
+	// AssigneesTable is the table that holds the assignees relation/edge. The primary key declared below.
+	AssigneesTable = "task_assignees"
+	// AssigneesInverseTable is the table name for the Person entity.
 	// It exists in this package in order to avoid circular dependency with the "person" package.
-	AssigneeInverseTable = "persons"
-	// AssigneeColumn is the table column denoting the assignee relation/edge.
-	AssigneeColumn = "assignee_id"
+	AssigneesInverseTable = "persons"
 	// SessionLinksTable is the table that holds the session_links relation/edge.
 	SessionLinksTable = "work_session_tasks"
 	// SessionLinksInverseTable is the table name for the WorkSessionTask entity.
@@ -89,13 +85,15 @@ var Columns = []string{
 	FieldDescription,
 	FieldPriority,
 	FieldStatus,
-	FieldAssigneeID,
 	FieldDeadline,
 	FieldRequiredAccounts,
 	FieldCreatedAt,
 }
 
 var (
+	// AssigneesPrimaryKey and AssigneesColumn2 are the table columns denoting the
+	// primary key for the assignees relation (M2M).
+	AssigneesPrimaryKey = []string{"task_id", "person_id"}
 	// LabelsPrimaryKey and LabelsColumn2 are the table columns denoting the
 	// primary key for the labels relation (M2M).
 	LabelsPrimaryKey = []string{"task_id", "label_id"}
@@ -208,11 +206,6 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
 }
 
-// ByAssigneeID orders the results by the assignee_id field.
-func ByAssigneeID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAssigneeID, opts...).ToFunc()
-}
-
 // ByDeadline orders the results by the deadline field.
 func ByDeadline(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDeadline, opts...).ToFunc()
@@ -230,10 +223,17 @@ func ByProjectField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByAssigneeField orders the results by assignee field.
-func ByAssigneeField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByAssigneesCount orders the results by assignees count.
+func ByAssigneesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newAssigneeStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborsCount(s, newAssigneesStep(), opts...)
+	}
+}
+
+// ByAssignees orders the results by assignees terms.
+func ByAssignees(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAssigneesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -285,11 +285,11 @@ func newProjectStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, ProjectTable, ProjectColumn),
 	)
 }
-func newAssigneeStep() *sqlgraph.Step {
+func newAssigneesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(AssigneeInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, AssigneeTable, AssigneeColumn),
+		sqlgraph.To(AssigneesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, AssigneesTable, AssigneesPrimaryKey...),
 	)
 }
 func newSessionLinksStep() *sqlgraph.Step {

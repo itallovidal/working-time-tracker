@@ -149,6 +149,8 @@ func Build(client *ent.Client, opts Options) (*App, error) {
 	}
 	taskSvc := task.NewService(taskStore, membershipStore, integrationSvc)
 	workSessionSvc := work_session.NewService(sessionStore, taskStore, allocationStore)
+	// Quem sai da lista de responsáveis de uma tarefa (ou é tirado) para o ponto nela (Decisão 31).
+	taskStore.SetWorkStopper(workSessionSvc)
 	receivableSvc := receivable.NewService(receivable.Deps{Store: receivable.NewStore(client)})
 	overviewSvc := overview.NewService(overview.Deps{
 		Projects:      projectSvc,

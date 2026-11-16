@@ -37,7 +37,7 @@ type PersonQuery struct {
 	inters              []Interceptor
 	predicates          []predicate.Person
 	withOrganization    *OrganizationQuery
-	withTasks           *TaskQuery
+	withAssignedTasks   *TaskQuery
 	withTeamMemberships *TeamMembershipQuery
 	withWorkSessions    *WorkSessionQuery
 	withSessions        *SessionQuery
@@ -106,8 +106,8 @@ func (_q *PersonQuery) QueryOrganization() *OrganizationQuery {
 	return query
 }
 
-// QueryTasks chains the current query on the "tasks" edge.
-func (_q *PersonQuery) QueryTasks() *TaskQuery {
+// QueryAssignedTasks chains the current query on the "assigned_tasks" edge.
+func (_q *PersonQuery) QueryAssignedTasks() *TaskQuery {
 	query := (&TaskClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
@@ -120,7 +120,7 @@ func (_q *PersonQuery) QueryTasks() *TaskQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(person.Table, person.FieldID, selector),
 			sqlgraph.To(task.Table, task.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, person.TasksTable, person.TasksColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, person.AssignedTasksTable, person.AssignedTasksPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -519,7 +519,7 @@ func (_q *PersonQuery) Clone() *PersonQuery {
 		inters:              append([]Interceptor{}, _q.inters...),
 		predicates:          append([]predicate.Person{}, _q.predicates...),
 		withOrganization:    _q.withOrganization.Clone(),
-		withTasks:           _q.withTasks.Clone(),
+		withAssignedTasks:   _q.withAssignedTasks.Clone(),
 		withTeamMemberships: _q.withTeamMemberships.Clone(),
 		withWorkSessions:    _q.withWorkSessions.Clone(),
 		withSessions:        _q.withSessions.Clone(),
@@ -546,14 +546,14 @@ func (_q *PersonQuery) WithOrganization(opts ...func(*OrganizationQuery)) *Perso
 	return _q
 }
 
-// WithTasks tells the query-builder to eager-load the nodes that are connected to
-// the "tasks" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *PersonQuery) WithTasks(opts ...func(*TaskQuery)) *PersonQuery {
+// WithAssignedTasks tells the query-builder to eager-load the nodes that are connected to
+// the "assigned_tasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PersonQuery) WithAssignedTasks(opts ...func(*TaskQuery)) *PersonQuery {
 	query := (&TaskClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withTasks = query
+	_q.withAssignedTasks = query
 	return _q
 }
 
@@ -736,7 +736,7 @@ func (_q *PersonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Perso
 		_spec       = _q.querySpec()
 		loadedTypes = [11]bool{
 			_q.withOrganization != nil,
-			_q.withTasks != nil,
+			_q.withAssignedTasks != nil,
 			_q.withTeamMemberships != nil,
 			_q.withWorkSessions != nil,
 			_q.withSessions != nil,
@@ -775,10 +775,10 @@ func (_q *PersonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Perso
 			return nil, err
 		}
 	}
-	if query := _q.withTasks; query != nil {
-		if err := _q.loadTasks(ctx, query, nodes,
-			func(n *Person) { n.Edges.Tasks = []*Task{} },
-			func(n *Person, e *Task) { n.Edges.Tasks = append(n.Edges.Tasks, e) }); err != nil {
+	if query := _q.withAssignedTasks; query != nil {
+		if err := _q.loadAssignedTasks(ctx, query, nodes,
+			func(n *Person) { n.Edges.AssignedTasks = []*Task{} },
+			func(n *Person, e *Task) { n.Edges.AssignedTasks = append(n.Edges.AssignedTasks, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -877,36 +877,64 @@ func (_q *PersonQuery) loadOrganization(ctx context.Context, query *Organization
 	}
 	return nil
 }
-func (_q *PersonQuery) loadTasks(ctx context.Context, query *TaskQuery, nodes []*Person, init func(*Person), assign func(*Person, *Task)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*Person)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
+func (_q *PersonQuery) loadAssignedTasks(ctx context.Context, query *TaskQuery, nodes []*Person, init func(*Person), assign func(*Person, *Task)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Person)
+	nids := make(map[uuid.UUID]map[*Person]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
 		if init != nil {
-			init(nodes[i])
+			init(node)
 		}
 	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(task.FieldAssigneeID)
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(person.AssignedTasksTable)
+		s.Join(joinT).On(s.C(task.FieldID), joinT.C(person.AssignedTasksPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(person.AssignedTasksPrimaryKey[1]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(person.AssignedTasksPrimaryKey[1]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
 	}
-	query.Where(predicate.Task(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(person.TasksColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Person]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Task](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.AssigneeID
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "assignee_id" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "assignee_id" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected "assigned_tasks" node returned %v`, n.ID)
 		}
-		assign(node, n)
+		for kn := range nodes {
+			assign(kn, n)
+		}
 	}
 	return nil
 }

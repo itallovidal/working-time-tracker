@@ -125,8 +125,8 @@ func TestHandler_Create_WithoutAssignee(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
 	}
-	if !strings.Contains(rec.Body.String(), `"assignee_id":null`) {
-		t.Errorf("body = %s, want assignee_id null", rec.Body.String())
+	if !strings.Contains(rec.Body.String(), `"assignees":[]`) {
+		t.Errorf("body = %s, want no assignees", rec.Body.String())
 	}
 }
 

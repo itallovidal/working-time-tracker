@@ -66,7 +66,7 @@ func TestService_TaskName_Validation(t *testing.T) {
 			checkNameResult(t, got, err, tc.wantCode, tc.wantName)
 		})
 		t.Run("update "+tc.name, func(t *testing.T) {
-			got, err := svc.UpdateAs("", tk.ID.String(), tc.in, "", nil, nil, task.Attrs{})
+			got, err := svc.UpdateAs(task.Actor{}, tk.ID.String(), tc.in, "", nil, nil, task.Attrs{})
 			checkNameResult(t, got, err, tc.wantCode, tc.wantName)
 		})
 	}
@@ -102,7 +102,7 @@ func TestService_TaskDescription_Validation(t *testing.T) {
 		t.Errorf("description over the limit = %v (field %q)", err, field)
 	}
 	d := strings.Repeat("a", max+1)
-	_, err = svc.PatchAs("", tk.ID.String(), "Base", &d, nil, validate.Optional[time.Time]{}, task.Attrs{})
+	_, err = svc.PatchAs(task.Actor{}, tk.ID.String(), "Base", &d, nil, validate.Optional[time.Time]{}, task.Attrs{})
 	if code, field := codeAndField(err); code != "task.description_too_long" || field != "long_description" {
 		t.Errorf("patch description over the limit = %v (field %q)", err, field)
 	}
@@ -112,12 +112,12 @@ func TestService_TaskDescription_Validation(t *testing.T) {
 func TestService_PatchAs_KeepsTheDescription(t *testing.T) {
 	svc, _, tk := validationFixture(t)
 
-	got, err := svc.PatchAs("", tk.ID.String(), "Renomeada", nil, nil, validate.Optional[time.Time]{}, task.Attrs{})
+	got, err := svc.PatchAs(task.Actor{}, tk.ID.String(), "Renomeada", nil, nil, validate.Optional[time.Time]{}, task.Attrs{})
 	if err != nil || got.Name != "Renomeada" || got.Description != "texto" {
 		t.Fatalf("patch without description = %+v, %v; want the description kept", got, err)
 	}
 	empty := ""
-	got, err = svc.PatchAs("", tk.ID.String(), "Renomeada", &empty, nil, validate.Optional[time.Time]{}, task.Attrs{})
+	got, err = svc.PatchAs(task.Actor{}, tk.ID.String(), "Renomeada", &empty, nil, validate.Optional[time.Time]{}, task.Attrs{})
 	if err != nil || got.Description != "" {
 		t.Errorf("patch with an empty description = %+v, %v; want it emptied", got, err)
 	}
@@ -129,29 +129,29 @@ func TestService_Deadline_Validation(t *testing.T) {
 	id := tk.ID.String()
 	day := time.Date(2030, 5, 20, 12, 0, 0, 0, time.UTC)
 
-	got, err := svc.PatchAs("", id, "Base", nil, nil, validate.Optional[time.Time]{Set: true, Value: &day}, task.Attrs{})
+	got, err := svc.PatchAs(task.Actor{}, id, "Base", nil, nil, validate.Optional[time.Time]{Set: true, Value: &day}, task.Attrs{})
 	if err != nil || !got.Deadline.Equal(day) {
 		t.Fatalf("set the deadline = %v, %v", got, err)
 	}
 	// Ausente mantém.
-	got, err = svc.PatchAs("", id, "Base", nil, nil, validate.Optional[time.Time]{}, task.Attrs{})
+	got, err = svc.PatchAs(task.Actor{}, id, "Base", nil, nil, validate.Optional[time.Time]{}, task.Attrs{})
 	if err != nil || !got.Deadline.Equal(day) {
 		t.Errorf("absent deadline = %v, %v; want it kept", got.Deadline, err)
 	}
 	// Em UpdateAttrs também.
-	got, err = svc.PatchAttrsAs("", id, task.Attrs{}, nil, validate.Optional[time.Time]{})
+	got, err = svc.PatchAttrsAs(task.Actor{}, id, task.Attrs{}, nil, validate.Optional[time.Time]{})
 	if err != nil || !got.Deadline.Equal(day) {
 		t.Errorf("absent deadline on attributes = %v, %v; want it kept", got.Deadline, err)
 	}
 	// null apaga (o tempo zero é a tarefa sem prazo).
-	got, err = svc.PatchAs("", id, "Base", nil, nil, validate.Optional[time.Time]{Set: true}, task.Attrs{})
+	got, err = svc.PatchAs(task.Actor{}, id, "Base", nil, nil, validate.Optional[time.Time]{Set: true}, task.Attrs{})
 	if err != nil || got.HasDeadline() {
 		t.Errorf("null deadline = %v, %v; want it cleared", got.Deadline, err)
 	}
-	if _, err = svc.PatchAttrsAs("", id, task.Attrs{}, nil, validate.Optional[time.Time]{Set: true, Value: &day}); err != nil {
+	if _, err = svc.PatchAttrsAs(task.Actor{}, id, task.Attrs{}, nil, validate.Optional[time.Time]{Set: true, Value: &day}); err != nil {
 		t.Fatalf("set again: %v", err)
 	}
-	got, err = svc.PatchAttrsAs("", id, task.Attrs{}, nil, validate.Optional[time.Time]{Set: true})
+	got, err = svc.PatchAttrsAs(task.Actor{}, id, task.Attrs{}, nil, validate.Optional[time.Time]{Set: true})
 	if err != nil || got.HasDeadline() {
 		t.Errorf("null deadline on attributes = %v, %v; want it cleared", got.Deadline, err)
 	}
@@ -166,11 +166,11 @@ func TestService_Deadline_Validation(t *testing.T) {
 		{"create before 1971", func() error { _, err := svc.Create(pid, "X", "", "", &old); return err }},
 		{"create zero time", func() error { _, err := svc.Create(pid, "X", "", "", &zero); return err }},
 		{"patch before 1971", func() error {
-			_, err := svc.PatchAs("", id, "Base", nil, nil, validate.Optional[time.Time]{Set: true, Value: &old}, task.Attrs{})
+			_, err := svc.PatchAs(task.Actor{}, id, "Base", nil, nil, validate.Optional[time.Time]{Set: true, Value: &old}, task.Attrs{})
 			return err
 		}},
 		{"attributes before 1971", func() error {
-			_, err := svc.PatchAttrsAs("", id, task.Attrs{}, nil, validate.Optional[time.Time]{Set: true, Value: &old})
+			_, err := svc.PatchAttrsAs(task.Actor{}, id, task.Attrs{}, nil, validate.Optional[time.Time]{Set: true, Value: &old})
 			return err
 		}},
 	}
@@ -190,14 +190,14 @@ func TestService_Priority_EmptyIsNone(t *testing.T) {
 	svc, pid, tk := validationFixture(t)
 	empty, bad, high := "", "ultra", "high"
 
-	created, err := svc.CreateAs("", pid, "P", "", "", nil, task.Attrs{Priority: &empty})
+	created, err := svc.CreateAs(task.Actor{}, pid, "P", "", "", nil, task.Attrs{Priority: &empty})
 	if err != nil || created.Priority != "none" {
 		t.Errorf("create with an empty priority = %+v, %v; want none", created, err)
 	}
-	if _, err := svc.UpdateAs("", tk.ID.String(), "Base", "", nil, nil, task.Attrs{Priority: &high}); err != nil {
+	if _, err := svc.UpdateAs(task.Actor{}, tk.ID.String(), "Base", "", nil, nil, task.Attrs{Priority: &high}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := svc.UpdateAs("", tk.ID.String(), "Base", "", nil, nil, task.Attrs{Priority: &empty})
+	got, err := svc.UpdateAs(task.Actor{}, tk.ID.String(), "Base", "", nil, nil, task.Attrs{Priority: &empty})
 	if err != nil || got.Priority != "none" {
 		t.Errorf("update with an empty priority = %+v, %v; want none", got, err)
 	}
@@ -211,11 +211,11 @@ func TestService_Priority_EmptyIsNone(t *testing.T) {
 	}
 	for name, call := range map[string]func() error{
 		"create": func() error {
-			_, err := svc.CreateAs("", pid, "P", "", "", nil, task.Attrs{Priority: &bad})
+			_, err := svc.CreateAs(task.Actor{}, pid, "P", "", "", nil, task.Attrs{Priority: &bad})
 			return err
 		},
 		"update": func() error {
-			_, err := svc.UpdateAs("", tk.ID.String(), "Base", "", nil, nil, task.Attrs{Priority: &bad})
+			_, err := svc.UpdateAs(task.Actor{}, tk.ID.String(), "Base", "", nil, nil, task.Attrs{Priority: &bad})
 			return err
 		},
 		"attributes": func() error { _, err := svc.UpdateAttrs(tk.ID.String(), task.Attrs{Priority: &bad}); return err },

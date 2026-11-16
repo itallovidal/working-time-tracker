@@ -165,8 +165,8 @@ func TestSessionTasks_OpenSession(t *testing.T) {
 	if got := f.status(b); got != "in_progress" {
 		t.Errorf("B is %q after entering the open session, want in_progress", got)
 	}
-	if got, _ := f.tasks.Get(b); got.AssigneeID == nil || *got.AssigneeID != f.ana {
-		t.Errorf("B assignee = %v, want Ana, who has the clock open", got.AssigneeID)
+	if got, _ := f.tasks.Get(b); !got.HasAssignee(f.ana) {
+		t.Errorf("B assignee = %v, want Ana, who has the clock open", got.AssigneeIDs())
 	}
 	if _, err := f.ws.AddTask(f.proj, sid, b, nil, nil); !errors.Is(err, work_session.ErrTaskOverlap) {
 		t.Errorf("adding B again while it is in the session: %v, want ErrTaskOverlap", err)
@@ -238,8 +238,8 @@ func TestSessionTasks_ClosedSession(t *testing.T) {
 	if got := f.status(c); got != "backlog" {
 		t.Errorf("C is %q after entering a closed session, want it untouched (backlog)", got)
 	}
-	if got, _ := f.tasks.Get(c); got.AssigneeID != nil {
-		t.Errorf("C assignee = %v, want none", got.AssigneeID)
+	if got, _ := f.tasks.Get(c); !got.Free() {
+		t.Errorf("C assignee = %v, want none", got.AssigneeIDs())
 	}
 	if _, err := f.ws.AddTask(f.proj, sid, c, nil, nil); !errors.Is(err, work_session.ErrTaskOverlap) {
 		t.Errorf("adding C over its own interval: %v, want ErrTaskOverlap", err)

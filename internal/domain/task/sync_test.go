@@ -33,7 +33,7 @@ func newHookFixture(t *testing.T) *hookFixture {
 	proj, _ := projSvc.Create(org.ID.String(), "Projeto", "", 0, project.Routine{})
 	f := &hookFixture{store: task.NewStore(testClient), project: proj.ID.String(), person: p.ID.String()}
 	f.svc = task.NewService(f.store, team.NewMembershipStore(testClient), nil)
-	tk, err := f.svc.CreateAs(f.person, f.project, "Tarefa", "", "", nil, task.Attrs{})
+	tk, err := f.svc.CreateAs(task.Actor{ID: f.person}, f.project, "Tarefa", "", "", nil, task.Attrs{})
 	if err != nil {
 		t.Fatalf("create task: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestStore_ChangeHook(t *testing.T) {
 	f := newHookFixture(t)
 	id := f.taskID.String()
 
-	if _, err := f.svc.UpdateAs(f.person, id, "Nova", "texto", nil, nil, task.Attrs{}); err != nil || f.took() != 1 {
+	if _, err := f.svc.UpdateAs(task.Actor{ID: f.person}, id, "Nova", "texto", nil, nil, task.Attrs{}); err != nil || f.took() != 1 {
 		t.Errorf("edit: err = %v, the hook must be told once", err)
 	}
 	status := "closed"
@@ -127,12 +127,12 @@ func TestStore_ApplyRemote(t *testing.T) {
 	name, status := "Título da issue", "closed"
 	long := strings.Repeat("é", task.MaxDescriptionLen+500) // o que vem da issue não passa pelo limite de quem edita
 	if err := f.store.ApplyRemote(f.taskID, task.RemotePatch{
-		Name: &name, Description: &long, Status: &status, SetAssignee: true, AssigneeID: &assignee, Labels: &labels,
+		Name: &name, Description: &long, Status: &status, AddAssignees: []uuid.UUID{assignee}, Labels: &labels,
 	}); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
 	got, _ := f.store.GetByID(f.taskID.String())
-	if got.Name != name || got.Description != long || got.Status != "closed" || got.AssigneeID == nil || *got.AssigneeID != assignee || len(got.Labels) != 2 {
+	if got.Name != name || got.Description != long || got.Status != "closed" || !got.HasAssignee(assignee) || len(got.Labels) != 2 {
 		t.Errorf("task after apply = %+v", got)
 	}
 
@@ -142,16 +142,16 @@ func TestStore_ApplyRemote(t *testing.T) {
 		t.Fatalf("apply name: %v", err)
 	}
 	got, _ = f.store.GetByID(f.taskID.String())
-	if got.Name != "Outro" || got.AssigneeID == nil || len(got.Labels) != 2 || got.Status != "closed" {
+	if got.Name != "Outro" || got.Free() || len(got.Labels) != 2 || got.Status != "closed" {
 		t.Errorf("a partial patch changed more than it carried: %+v", got)
 	}
 
 	none := []task.Label{}
-	if err := f.store.ApplyRemote(f.taskID, task.RemotePatch{SetAssignee: true, Labels: &none}); err != nil {
+	if err := f.store.ApplyRemote(f.taskID, task.RemotePatch{RemoveAssignees: []uuid.UUID{assignee}, Labels: &none}); err != nil {
 		t.Fatalf("clear: %v", err)
 	}
 	got, _ = f.store.GetByID(f.taskID.String())
-	if got.AssigneeID != nil || len(got.Labels) != 0 {
+	if !got.Free() || len(got.Labels) != 0 {
 		t.Errorf("assignee and labels must be cleared: %+v", got)
 	}
 	if err := f.store.ApplyRemote(uuid.New(), task.RemotePatch{Name: &other}); err == nil {
@@ -167,13 +167,13 @@ func TestStore_CreateImportedAndLinked(t *testing.T) {
 	assignee := uuid.MustParse(f.person)
 
 	got, err := f.store.CreateImported(task.Imported{
-		ProjectID: pid, Name: "Corrigir login", Description: "corpo", Labels: labels, AssigneeID: &assignee,
+		ProjectID: pid, Name: "Corrigir login", Description: "corpo", Labels: labels, AssigneeIDs: []uuid.UUID{assignee},
 	})
 	if err != nil {
 		t.Fatalf("create imported: %v", err)
 	}
 	if got.Status != "backlog" || got.Priority != "none" || got.Name != "Corrigir login" || got.Description != "corpo" ||
-		got.AssigneeID == nil || len(got.Labels) != 1 || len(got.Links) != 0 {
+		got.Free() || len(got.Labels) != 1 || len(got.Links) != 0 {
 		t.Errorf("imported task = %+v, want a backlog task with no link (the link belongs to who imports)", got)
 	}
 	if got.Deadline.After(time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)) {
@@ -318,7 +318,7 @@ func TestStore_CreateHook(t *testing.T) {
 	}
 
 	f.took()
-	tk, err := f.svc.CreateAs(f.person, f.project, "Nova", "", "", nil, task.Attrs{})
+	tk, err := f.svc.CreateAs(task.Actor{ID: f.person}, f.project, "Nova", "", "", nil, task.Attrs{})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -330,7 +330,7 @@ func TestStore_CreateHook(t *testing.T) {
 	}
 	// As integrações que a pessoa desmarcou vão junto no aviso (e não são guardadas na tarefa).
 	off := uuid.New()
-	tk2, err := f.svc.CreateAs(f.person, f.project, "Outra", "", "", nil, task.Attrs{SkipPublish: []uuid.UUID{off}})
+	tk2, err := f.svc.CreateAs(task.Actor{ID: f.person}, f.project, "Outra", "", "", nil, task.Attrs{SkipPublish: []uuid.UUID{off}})
 	if err != nil {
 		t.Fatalf("create with a skip: %v", err)
 	}
@@ -339,7 +339,7 @@ func TestStore_CreateHook(t *testing.T) {
 	}
 	f.took()
 	// Editar não é criar.
-	if _, err := f.svc.UpdateAs(f.person, tk.ID.String(), "Nova (editada)", "", nil, nil, task.Attrs{}); err != nil {
+	if _, err := f.svc.UpdateAs(task.Actor{ID: f.person}, tk.ID.String(), "Nova (editada)", "", nil, nil, task.Attrs{}); err != nil {
 		t.Fatalf("update: %v", err)
 	}
 	if ids := got(); len(ids) != 0 {
@@ -354,7 +354,7 @@ func TestStore_CreateHook(t *testing.T) {
 		t.Errorf("an imported task told the create hook: %v", ids)
 	}
 	f.store.SetCreateHook(nil)
-	if _, err := f.svc.CreateAs(f.person, f.project, "Sem gancho", "", "", nil, task.Attrs{}); err != nil {
+	if _, err := f.svc.CreateAs(task.Actor{ID: f.person}, f.project, "Sem gancho", "", "", nil, task.Attrs{}); err != nil {
 		t.Errorf("create with no hook: %v", err)
 	}
 }

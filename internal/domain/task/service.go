@@ -48,14 +48,15 @@ func NewService(taskStore *Store, membershipStore *team.MembershipStore, integra
 	return &Service{taskStore: taskStore, membershipStore: membershipStore, integrationSvc: integrationSvc}
 }
 
+// Create cria a tarefa em nome do sistema (o seed, os testes): com um responsável, ou livre com o assigneeID vazio.
 func (s *Service) Create(projectID, name, description, assigneeID string, deadline *time.Time) (*Task, error) {
-	return s.CreateAs("", projectID, name, description, assigneeID, deadline, Attrs{})
+	return s.CreateAs(Actor{}, projectID, name, description, assigneeID, deadline, Attrs{})
 }
 
-// CreateAs cria a tarefa em nome de quem está logado. Quem escolhe a si mesmo
-// como responsável sempre pode: é o "atribuir a mim". Qualquer outra pessoa
-// precisa estar no projeto (ter valor por hora nele).
-func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID string, deadline *time.Time, attrs Attrs) (*Task, error) {
+// CreateAs cria a tarefa em nome de quem pede. Os responsáveis vêm de attrs.Assignees ou, sem ela, do assigneeID
+// (uma pessoa; vazio deixa a tarefa livre), com as regras de checkAssignees: quem não administra o projeto só cria a
+// tarefa para si ou livre.
+func (s *Service) CreateAs(actor Actor, projectID, name, description, assigneeID string, deadline *time.Time, attrs Attrs) (*Task, error) {
 	name, err := cleanName(name)
 	if err != nil {
 		return nil, err
@@ -79,22 +80,9 @@ func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID stri
 		}
 	}
 	// Sem responsável, a tarefa fica disponível: quem bater o ponto nela a pega.
-	var assignee *uuid.UUID
-	if assigneeID != "" {
-		uid, err := uuid.Parse(assigneeID)
-		if err != nil {
-			return nil, ErrInvalidAssignee.With("field", "assignee_id")
-		}
-		if assigneeID != selfID {
-			isMember, err := s.membershipStore.IsPersonInProject(assigneeID, projectID)
-			if err != nil {
-				return nil, err
-			}
-			if !isMember {
-				return nil, ErrAssigneeNotInTeam.With("field", "assignee_id")
-			}
-		}
-		assignee = &uid
+	want, field, err := wantedAssignees(&assigneeID, attrs.Assignees)
+	if err != nil {
+		return nil, err
 	}
 
 	var dl time.Time
@@ -115,22 +103,34 @@ func (s *Service) CreateAs(selfID, projectID, name, description, assigneeID stri
 		Priority:    priority,
 		Status:      StatusBacklog,
 		Labels:      labels,
-		AssigneeID:  assignee,
+		Assignees:   []Person{},
 		Deadline:    dl,
 	}
 	if required != nil {
 		task.RequiredAccounts = *required
 	}
-	if assignee != nil {
-		if err := s.checkRequired(task, *assignee); err != nil {
-			return nil, err
-		}
+	if err := s.checkAssignees(actor, task, *want, field); err != nil {
+		return nil, err
 	}
+	task.Assignees = people(*want)
 	if err := s.taskStore.Create(task); err != nil {
 		return nil, err
 	}
 	s.taskStore.created(task.ID, attrs.SkipPublish)
 	return s.taskStore.GetByID(task.ID.String())
+}
+
+// People lista as pessoas do projeto, por nome: são elas que podem ser responsáveis pelas tarefas dele.
+func (s *Service) People(projectID string) ([]Person, error) {
+	people, err := s.membershipStore.ListPersonsInProject(projectID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Person, len(people))
+	for i, p := range people {
+		out[i] = Person{ID: p.ID, Name: p.Name, Email: p.Email}
+	}
+	return out, nil
 }
 
 // ListByProject devolve, de uma vez, todas as tarefas do projeto que passam
@@ -192,15 +192,17 @@ func (s *Service) Get(id string) (*Task, error) {
 	return s.taskStore.GetByID(id)
 }
 
+// Update altera a tarefa em nome do sistema. O assigneeID nil mantém os responsáveis, vazio deixa a tarefa livre e
+// um id a deixa só com essa pessoa.
 func (s *Service) Update(id, name, description string, assigneeID *string, deadline *time.Time) (*Task, error) {
-	return s.UpdateAs("", id, name, description, assigneeID, deadline, Attrs{})
+	return s.UpdateAs(Actor{}, id, name, description, assigneeID, deadline, Attrs{})
 }
 
-// UpdateAs altera a tarefa em nome de quem está logado; a regra do responsável é a do CreateAs. A descrição e o
+// UpdateAs altera a tarefa em nome de quem pede; a regra dos responsáveis é a do CreateAs. A descrição e o
 // prazo são sempre gravados (um prazo nil mantém o que a tarefa tem); quem precisa manter a descrição ou apagar
 // o prazo usa PatchAs.
-func (s *Service) UpdateAs(selfID, id, name, description string, assigneeID *string, deadline *time.Time, attrs Attrs) (*Task, error) {
-	return s.PatchAs(selfID, id, name, &description, assigneeID, deadlineOpt(deadline), attrs)
+func (s *Service) UpdateAs(actor Actor, id, name, description string, assigneeID *string, deadline *time.Time, attrs Attrs) (*Task, error) {
+	return s.PatchAs(actor, id, name, &description, assigneeID, deadlineOpt(deadline), attrs)
 }
 
 // deadlineOpt é o prazo de quem não diz "apagar": nil é ausente, e o valor, um prazo novo.
@@ -228,7 +230,7 @@ func resolveDeadline(o validate.Optional[time.Time]) (*time.Time, error) {
 
 // PatchAs é o UpdateAs da API: a descrição nil mantém a que a tarefa tem, e o prazo distingue ausente (mantém),
 // null (apaga) e um valor.
-func (s *Service) PatchAs(selfID, id, name string, description *string, assigneeID *string, deadline validate.Optional[time.Time], attrs Attrs) (*Task, error) {
+func (s *Service) PatchAs(actor Actor, id, name string, description *string, assigneeID *string, deadline validate.Optional[time.Time], attrs Attrs) (*Task, error) {
 	name, err := cleanName(name)
 	if err != nil {
 		return nil, err
@@ -274,14 +276,15 @@ func (s *Service) PatchAs(selfID, id, name string, description *string, assignee
 	if required != nil {
 		task.RequiredAccounts = *required
 	}
-	assignee, unassign, err := s.checkAssignee(selfID, task, assigneeID)
+	want, field, err := wantedAssignees(assigneeID, attrs.Assignees)
 	if err != nil {
 		return nil, err
 	}
-	if assignee != nil {
-		task.AssigneeID = assignee
-	} else if unassign {
-		task.AssigneeID = nil
+	if want != nil {
+		if err := s.checkAssignees(actor, task, *want, field); err != nil {
+			return nil, err
+		}
+		task.Assignees = people(*want)
 	}
 	if dl != nil {
 		task.Deadline = *dl
@@ -325,8 +328,9 @@ func cleanPriority(p *string) (*string, error) {
 }
 
 // Claim passa a tarefa para quem pediu, sem bater o ponto e sem mexer no status: é pegar a tarefa para
-// fazer depois. Só vale para uma tarefa sem responsável (ErrAlreadyAssigned se já é de outra pessoa); quem
-// pega a que já é sua não muda nada, e de dois pedidos juntos só um leva (o outro recebe o conflito).
+// fazer depois. Só vale para uma tarefa livre (ErrAlreadyAssigned se já tem gente: para entrar numa tarefa dividida,
+// alguém dela, ou o admin do projeto, acrescenta a pessoa); quem pega a que já é sua não muda nada, e de dois pedidos
+// juntos só um leva (o outro recebe o conflito).
 func (s *Service) Claim(selfID, id string) (*Task, error) {
 	person, err := uuid.Parse(selfID)
 	if err != nil {
@@ -336,10 +340,10 @@ func (s *Service) Claim(selfID, id string) (*Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	if t.AssigneeID != nil {
-		if *t.AssigneeID == person {
-			return t, nil
-		}
+	if t.HasAssignee(person) {
+		return t, nil
+	}
+	if !t.Free() {
 		return nil, ErrAlreadyAssigned
 	}
 	if err := s.taskStore.CheckRequired(t, person); err != nil {
@@ -353,52 +357,118 @@ func (s *Service) Claim(selfID, id string) (*Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !claimed && (t.AssigneeID == nil || *t.AssigneeID != person) {
+	if !claimed && !t.HasAssignee(person) {
 		return nil, ErrAlreadyAssigned // outra pessoa levou entre a leitura e o UPDATE
 	}
 	return t, nil
 }
 
-// checkAssignee confere o responsável pedido para a tarefa t. Nil mantém o que ela tem, vazio a deixa sem
-// responsável (volta a ficar disponível) e um id só vale para quem está no projeto (tem valor por hora nele), salvo quem
-// pede para si mesmo ou quem já é o responsável. Devolve a pessoa a gravar, ou unassign para tirá-la; com
-// os dois zerados, nada muda.
-func (s *Service) checkAssignee(selfID string, t *Task, assigneeID *string) (assignee *uuid.UUID, unassign bool, err error) {
-	if assigneeID == nil {
-		return nil, false, nil
+// wantedAssignees traduz o pedido para a lista de responsáveis que a tarefa passa a ter, e diz o campo dos erros:
+// list (assignee_ids) é a lista inteira; sem ela, o assigneeID de uma pessoa só (vazio deixa a tarefa livre). Nil nos
+// dois mantém o que a tarefa tem (devolve nil). Os ids repetidos contam uma vez.
+func wantedAssignees(assigneeID *string, list *[]string) (*[]uuid.UUID, string, error) {
+	field, raw := "assignee_ids", []string{}
+	switch {
+	case list != nil:
+		raw = *list
+	case assigneeID == nil:
+		return nil, "", nil
+	default:
+		field = "assignee_id"
+		if *assigneeID != "" {
+			raw = []string{*assigneeID}
+		}
 	}
-	if *assigneeID == "" {
-		return nil, true, nil
-	}
-	uid, err := uuid.Parse(*assigneeID)
-	if err != nil {
-		return nil, false, ErrInvalidAssignee.With("field", "assignee_id")
-	}
-	if (t.AssigneeID == nil || uid != *t.AssigneeID) && *assigneeID != selfID {
-		isMember, err := s.membershipStore.IsPersonInProject(*assigneeID, t.ProjectID.String())
+	out := []uuid.UUID{}
+	for _, r := range raw {
+		uid, err := uuid.Parse(strings.TrimSpace(r))
 		if err != nil {
-			return nil, false, err
+			return nil, field, ErrInvalidAssignee.With("field", field)
 		}
-		if !isMember {
-			return nil, false, ErrAssigneeNotInTeam.With("field", "assignee_id")
-		}
-	}
-	// A trava vale para quem passa a ser o responsável: ligá-la não tira quem já é.
-	if t.AssigneeID == nil || uid != *t.AssigneeID {
-		if err := s.checkRequired(t, uid); err != nil {
-			return nil, false, err
+		if !slices.Contains(out, uid) {
+			out = append(out, uid)
 		}
 	}
-	return &uid, false, nil
+	return &out, field, nil
 }
 
-// checkRequired é o CheckRequired do store com o erro preso ao campo do responsável, para o formulário mostrá-lo
+// checkAssignees confere a lista de responsáveis que a tarefa t passa a ter (Decisão 31), pessoa a pessoa, só em
+// quem entra ou sai:
+//   - Numa tarefa livre, quem não administra o projeto só pega a tarefa para si; pôr outra pessoa é ErrShareForbidden.
+//   - Numa tarefa com gente, quem não está nela não entra sozinho (ErrAlreadyAssigned: alguém dela o acrescenta), e
+//     só um responsável acrescenta outras pessoas.
+//   - O responsável sai ele mesmo; tirar outra pessoa é do admin (ErrRemoveForbidden).
+//
+// O sistema (Actor vazio) e o admin passam por essas regras. Para todos, quem entra precisa estar no projeto (salvo
+// quem pede para si) e ter as contas da trava, e a lista tem no máximo MaxAssignees. A trava vale só para quem entra:
+// ligá-la não tira quem já está.
+func (s *Service) checkAssignees(actor Actor, t *Task, want []uuid.UUID, field string) error {
+	if len(want) > MaxAssignees {
+		return ErrTooManyAssignees.With("max", MaxAssignees, "field", field)
+	}
+	system := actor.ID == ""
+	var self uuid.UUID
+	if !system {
+		var err error
+		if self, err = uuid.Parse(actor.ID); err != nil {
+			return ErrInvalidAssignee.With("field", field)
+		}
+	}
+	current := t.AssigneeIDs()
+	added, removed := minus(want, current), minus(current, want)
+	if !system && !actor.Manage {
+		mine := slices.Contains(current, self)
+		for _, p := range added {
+			switch {
+			case p == self && len(current) == 0:
+				// Pegar a tarefa livre para si.
+			case p == self:
+				return ErrAlreadyAssigned.With("field", field)
+			case !mine:
+				return ErrShareForbidden.With("field", field)
+			}
+		}
+		for _, p := range removed {
+			if p != self {
+				return ErrRemoveForbidden.With("field", field)
+			}
+		}
+	}
+	for _, p := range added {
+		if system || p != self {
+			isMember, err := s.membershipStore.IsPersonInProject(p.String(), t.ProjectID.String())
+			if err != nil {
+				return err
+			}
+			if !isMember {
+				return ErrAssigneeNotInTeam.With("field", field)
+			}
+		}
+		if err := s.checkRequired(t, p, field); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// minus são os ids de a que não estão em b, na ordem de a.
+func minus(a, b []uuid.UUID) []uuid.UUID {
+	var out []uuid.UUID
+	for _, id := range a {
+		if !slices.Contains(b, id) {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// checkRequired é o CheckRequired do store com o erro preso ao campo dos responsáveis, para o formulário mostrá-lo
 // embaixo dele.
-func (s *Service) checkRequired(t *Task, personID uuid.UUID) error {
+func (s *Service) checkRequired(t *Task, personID uuid.UUID, field string) error {
 	err := s.taskStore.CheckRequired(t, personID)
 	var ae *apperr.Error
 	if errors.As(err, &ae) {
-		return ae.With("field", "assignee_id")
+		return ae.With("field", field)
 	}
 	return err
 }
@@ -423,20 +493,20 @@ func cleanRequired(list *[]string) (*[]string, error) {
 	return &out, nil
 }
 
-// UpdateAttrs é UpdateAttrsAs sem responsável e sem prazo, os campos que só quem edita os detalhes manda.
+// UpdateAttrs é UpdateAttrsAs em nome do sistema, sem o assigneeID e sem prazo (attrs.Assignees ainda vale).
 func (s *Service) UpdateAttrs(id string, attrs Attrs) (*Task, error) {
-	return s.UpdateAttrsAs("", id, attrs, nil, nil)
+	return s.UpdateAttrsAs(Actor{}, id, attrs, nil, nil)
 }
 
-// UpdateAttrsAs é a edição dos detalhes da tarefa: muda só a prioridade, o status, as etiquetas, o
-// responsável e o prazo que vierem (os que faltam ficam como estão), sem o nome e a descrição. A regra do
-// responsável é a do UpdateAs.
-func (s *Service) UpdateAttrsAs(selfID, id string, attrs Attrs, assigneeID *string, deadline *time.Time) (*Task, error) {
-	return s.PatchAttrsAs(selfID, id, attrs, assigneeID, deadlineOpt(deadline))
+// UpdateAttrsAs é a edição dos detalhes da tarefa: muda só a prioridade, o status, as etiquetas, os
+// responsáveis e o prazo que vierem (os que faltam ficam como estão), sem o nome e a descrição. A regra dos
+// responsáveis é a do UpdateAs.
+func (s *Service) UpdateAttrsAs(actor Actor, id string, attrs Attrs, assigneeID *string, deadline *time.Time) (*Task, error) {
+	return s.PatchAttrsAs(actor, id, attrs, assigneeID, deadlineOpt(deadline))
 }
 
 // PatchAttrsAs é o UpdateAttrsAs da API: o prazo distingue ausente (mantém), null (apaga) e um valor.
-func (s *Service) PatchAttrsAs(selfID, id string, attrs Attrs, assigneeID *string, deadline validate.Optional[time.Time]) (*Task, error) {
+func (s *Service) PatchAttrsAs(actor Actor, id string, attrs Attrs, assigneeID *string, deadline validate.Optional[time.Time]) (*Task, error) {
 	var err error
 	if attrs.Priority, err = cleanPriority(attrs.Priority); err != nil {
 		return nil, err
@@ -466,8 +536,15 @@ func (s *Service) PatchAttrsAs(selfID, id string, attrs Attrs, assigneeID *strin
 	if patch.required != nil {
 		t.RequiredAccounts = *patch.required
 	}
-	if patch.assignee, patch.unassign, err = s.checkAssignee(selfID, t, assigneeID); err != nil {
+	want, field, err := wantedAssignees(assigneeID, attrs.Assignees)
+	if err != nil {
 		return nil, err
+	}
+	if want != nil {
+		if err := s.checkAssignees(actor, t, *want, field); err != nil {
+			return nil, err
+		}
+		patch.assignees = want
 	}
 	if err := s.taskStore.UpdateAttrs(t.ID, patch); err != nil {
 		return nil, err

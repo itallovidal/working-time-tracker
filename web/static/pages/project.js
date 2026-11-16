@@ -76,6 +76,55 @@ document.addEventListener('alpine:init', () => {
     },
   });
 
+  // assigneePicker é a lista de pessoas que escolhe os responsáveis de uma tarefa (Decisão 31): no criar, para o admin
+  // do projeto, e no Editar detalhes. Cada caixa só deixa o que a regra deixa: o admin põe e tira qualquer pessoa; quem
+  // não é pega a tarefa livre para si e, estando nela, acrescenta outras pessoas e sai, mas não desmarca quem já estava.
+  // Quem usa tem `draft.assignee_ids`, `members` (com `accounts`, para a trava), `assigneesWas` (os ids de quando a
+  // tarefa foi lida; [] na tarefa nova) e os de requiredTools.
+  const assigneePicker = () => ({
+    pickSearch: '',
+    assigneesWas: [],
+    manageAssignees() {
+      return WTT.can('collaborators.manage');
+    },
+    // pickPeople são as pessoas do projeto que passam pela busca, por nome.
+    pickPeople() {
+      const q = fold(this.pickSearch.trim());
+      return this.members.filter((m) => matches(m, q));
+    },
+    picked(m) {
+      return this.draft.assignee_ids.includes(m.id);
+    },
+    // canPick diz se a caixa da pessoa muda: desmarcar é do admin, da própria pessoa (sair) e de quem acabou de ser
+    // marcado; marcar é do admin, de quem pega a tarefa livre para si e de quem já está na tarefa.
+    canPick(m) {
+      const was = this.assigneesWas;
+      if (this.picked(m)) return this.manageAssignees() || m.id === me.id || !was.includes(m.id);
+      if (this.lacksRequired(m) || this.draft.assignee_ids.length >= WTT.limits.task_assignees) return false;
+      if (this.manageAssignees()) return true;
+      return m.id === me.id ? was.length === 0 : was.includes(me.id);
+    },
+    togglePick(m, on) {
+      const others = this.draft.assignee_ids.filter((id) => id !== m.id);
+      this.draft.assignee_ids = on ? [...others, m.id] : others;
+      this.clearField('assignee_ids');
+    },
+    // canChooseAssignees diz se a pessoa muda algo na lista: o admin sempre; os outros na tarefa livre ou na sua.
+    canChooseAssignees() {
+      return this.manageAssignees() || this.assigneesWas.length === 0 || this.assigneesWas.includes(me.id);
+    },
+    // pickHint diz a quem não é admin até onde vai o que ele pode.
+    pickHint() {
+      if (this.manageAssignees()) return '';
+      if (this.assigneesWas.length === 0) return WTT.t('tasks.assignees.hint_free');
+      return this.assigneesWas.includes(me.id) ? WTT.t('tasks.assignees.hint_mine') : WTT.t('tasks.assignees.hint_other');
+    },
+    // assigneesChanged diz se a lista marcada difere da que a tarefa tinha.
+    assigneesChanged() {
+      return [...this.draft.assignee_ids].sort().join() !== [...this.assigneesWas].sort().join();
+    },
+  });
+
   // projectSync é o botão Sincronizar das listas de tarefas: uma rodada completa nas integrações do projeto
   // com a sincronização das issues ligada (o servidor soma as rodadas), e a lista se recarrega com o que
   // veio. Só aparece com uma dessas ligada. Quem usa define afterSync(), que recarrega a lista dele.
@@ -157,7 +206,7 @@ document.addEventListener('alpine:init', () => {
     return ok;
   };
   // A etapa do passo a passo em que cada campo está: um erro do servidor leva de volta à etapa do campo.
-  const wizardStepOf = { name: 1, description: 1, long_description: 1, deadline: 2, priority: 2, label_ids: 2, assignee_id: 2 };
+  const wizardStepOf = { name: 1, description: 1, long_description: 1, deadline: 2, priority: 2, label_ids: 2, assignee_id: 2, assignee_ids: 2 };
 
   // taskWizard é o passo a passo do modal Nova tarefa: a etapa 1 é o nome e a descrição (em Markdown,
   // com pré-visualização) e a etapa 2, o resto. Editar uma tarefa não passa por aqui: o nome e a descrição,
@@ -200,7 +249,7 @@ document.addEventListener('alpine:init', () => {
         return undefined;
       }
       const spec = { deadline: [this.draft.deadline, deadlineRule] };
-      if (this.draft.assign === 'other') spec.assignee_id = [this.draft.assignee_id, WTT.rules.required];
+      if (this.draft.assign === 'people') spec.assignee_ids = [this.draft.assignee_ids.length ? 'ok' : '', WTT.rules.required];
       if (!this.check(spec)) return undefined;
       if (this.step === 2 && this.publishStep) {
         this.step = 3;
@@ -308,7 +357,7 @@ document.addEventListener('alpine:init', () => {
     // responsável a torna da pessoa: numa ligada a uma issue, o modal da conta (accountGate) vem antes.
     async startTask(t) {
       const gate = Alpine.store('accountGate');
-      if (!t.assignee_id && !(await gate.ask(t, 'start'))) return;
+      if (!(t.assignees || []).length && !(await gate.ask(t, 'start'))) return;
       return this.run('clock', async () => {
         try {
           if (this.sessionHere()) {
@@ -646,6 +695,7 @@ document.addEventListener('alpine:init', () => {
     ...labelTools(),
     ...projectSync(),
     ...requiredTools(),
+    ...assigneePicker(),
     ...taskBadges,
     loading: true,
     lists: Object.fromEntries(keys.map((key) => [key, emptyList()])),
@@ -654,7 +704,7 @@ document.addEventListener('alpine:init', () => {
     seq: 0,
     // assign: me, none ou other. publish_to são as integrações marcadas que a tela posta depois de criar (o GitHub); skip_publish,
     // as que o servidor posta sozinho (o Trello) e a pessoa desmarcou: sem isso, a caixa vem marcada.
-    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', label_ids: [], required_accounts: [], publish_to: [], skip_publish: [] },
+    draft: { name: '', description: '', assign: 'none', assignee_ids: [], deadline: '', priority: 'none', label_ids: [], required_accounts: [], publish_to: [], skip_publish: [] },
     // initLists lê os filtros da URL e busca as listas. As etiquetas vêm antes da primeira busca: uma etiqueta excluída
     // que ainda está na URL sai do filtro, em vez de zerar a lista. extra são as outras buscas da página, feitas junto.
     async initLists(...extra) {
@@ -848,7 +898,9 @@ document.addEventListener('alpine:init', () => {
       this.draft[key] = listed ? [...others, i.id] : others;
     },
     openCreate() {
-      this.draft = { name: '', description: '', assign: 'me', assignee_id: '', deadline: '', priority: 'none', label_ids: [], required_accounts: [], publish_to: [], skip_publish: [] };
+      this.draft = { name: '', description: '', assign: 'me', assignee_ids: [], deadline: '', priority: 'none', label_ids: [], required_accounts: [], publish_to: [], skip_publish: [] };
+      this.pickSearch = '';
+      this.assigneesWas = [];
       this.newLabel = '';
       this.errors.create = '';
       this.errors.label = '';
@@ -868,7 +920,7 @@ document.addEventListener('alpine:init', () => {
           t = await api('POST', '/api/projects/' + project.id + '/tasks', {
             name: this.draft.name.trim(),
             description: this.draft.description,
-            assignee_id: { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign],
+            assignee_ids: { me: [me.id], none: [], people: this.draft.assignee_ids }[this.draft.assign],
             deadline: WTT.fmt.fromDateInput(this.draft.deadline),
             priority: this.draft.priority,
             label_ids: this.draft.label_ids,
@@ -963,13 +1015,9 @@ document.addEventListener('alpine:init', () => {
       [...this.assignees, ...this.members].forEach((p) => { if (p.id !== me.id) byId.set(p.id, p); });
       return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, WTT.lang));
     },
-    // Outra pessoa só pode ser responsável se estiver num time do projeto; a própria, não precisa.
-    otherMembers() {
-      return this.members.filter((m) => m.id !== me.id);
-    },
     // Uma tarefa sua não aparece nesta página, que mostra as de outras pessoas: está em Minhas tarefas.
     createdText(t, shown) {
-      return WTT.t(shown ? 'tasks.created' : (t.assignee_id === me.id ? 'tasks.created_mine' : 'tasks.created_hidden'));
+      return WTT.t(shown ? 'tasks.created' : ((t.assignees || []).some((a) => a.id === me.id) ? 'tasks.created_mine' : 'tasks.created_hidden'));
     },
     // claim pega uma tarefa sem responsável para a pessoa, sem bater o ponto: ela sai da lista das sem
     // responsável e passa para Minhas tarefas. Se outra pessoa chegou antes, a lista é recarregada e o
@@ -1059,6 +1107,7 @@ document.addEventListener('alpine:init', () => {
     ...form(),
     ...mdTools(),
     ...requiredTools(),
+    ...assigneePicker(),
     taskId: WTT.boot.task_id,
     loading: true,
     task: null,
@@ -1066,9 +1115,9 @@ document.addEventListener('alpine:init', () => {
     integrations: [],
     sessions: [],
     ...labelTools(),
-    draft: { name: '', description: '', assign: 'none', assignee_id: '', deadline: '', priority: 'none', status: 'backlog', label_ids: [], required_accounts: [] }, // assign: me, none ou other
+    // assign (me ou none) é o do modo solo; na equipe, assignee_ids são as pessoas marcadas na lista.
+    draft: { name: '', description: '', assign: 'none', assignee_ids: [], deadline: '', priority: 'none', status: 'backlog', label_ids: [], required_accounts: [] },
     deadlineWas: '', // o dia do prazo quando a tarefa foi lida: só se manda o prazo se a pessoa o mudou
-    assigneeWas: '', // o responsável quando a tarefa foi lida ('' é nenhum): idem
     linkForm: { integration_id: '', external_item_id: '', external_item_url: '' },
     // O que se leu de cada item na plataforma e o aviso da última sincronização, por integração (id): cada
     // cartão da página tem o seu. As entradas são trocadas inteiras para a tela redesenhar.
@@ -1100,13 +1149,13 @@ document.addEventListener('alpine:init', () => {
     setTask(t) {
       this.task = t;
       this.deadlineWas = hasDeadlineDate(t.deadline) ? WTT.fmt.dateInput(t.deadline) : '';
-      this.assigneeWas = t.assignee_id || '';
+      // Os responsáveis só vão no Salvar se a pessoa os mudou, como o prazo (assigneesChanged).
+      this.assigneesWas = (t.assignees || []).map((a) => a.id);
       this.draft = {
         name: t.name,
         description: t.description || '',
-        // Sem responsável, a própria pessoa, ou outra: é o que o modal pergunta.
-        assign: !t.assignee_id ? 'none' : (t.assignee_id === me.id ? 'me' : 'other'),
-        assignee_id: t.assignee_id && t.assignee_id !== me.id ? t.assignee_id : '',
+        assign: this.assigneesWas.includes(me.id) ? 'me' : 'none',
+        assignee_ids: [...this.assigneesWas],
         // Sem prazo, o campo fica vazio: o ano 1 do tempo zero não cabe num <input type="date">.
         deadline: hasDeadlineDate(t.deadline) ? WTT.fmt.dateInput(t.deadline) : '',
         priority: t.priority || 'none',
@@ -1114,10 +1163,9 @@ document.addEventListener('alpine:init', () => {
         label_ids: (t.labels || []).map((l) => l.id),
         required_accounts: [...(t.required_accounts || [])],
       };
-      // Quem saiu dos times continua aparecendo como responsável atual.
-      if (t.assignee && !this.members.some((m) => m.id === t.assignee_id)) {
-        this.members = [t.assignee, ...this.members];
-      }
+      // Quem saiu do projeto continua aparecendo enquanto for responsável.
+      const gone = (t.assignees || []).filter((a) => !this.members.some((m) => m.id === a.id));
+      if (gone.length > 0) this.members = [...gone, ...this.members];
       // Só quem ainda não tem vínculo pode receber um à mão.
       const free = this.linkable();
       if (!free.some((i) => i.id === this.linkForm.integration_id)) this.linkForm.integration_id = free.length > 0 ? free[0].id : '';
@@ -1186,16 +1234,20 @@ document.addEventListener('alpine:init', () => {
     // apaga: sem mudança a chave é omitida, e o campo esvaziado manda null.
     saveDetails() {
       const spec = { deadline: [this.draft.deadline, deadlineRule] };
-      if (this.draft.assign === 'other') spec.assignee_id = [this.draft.assignee_id, WTT.rules.required];
       if (!this.check(spec)) return undefined;
       return this.run('details', async () => {
-        const assignee = { me: me.id, none: '', other: this.draft.assignee_id }[this.draft.assign];
         const body = {
           status: this.draft.status,
           priority: this.draft.priority,
           label_ids: this.draft.label_ids,
-          assignee_id: assignee === this.assigneeWas ? null : assignee,
         };
+        // No modo solo é Atribuir a mim ou Sem responsável; na equipe, a lista marcada.
+        if (me.organization_solo) {
+          const solo = this.draft.assign === 'me' ? [me.id] : [];
+          if ([...solo].sort().join() !== [...this.assigneesWas].sort().join()) body.assignee_ids = solo;
+        } else if (this.assigneesChanged()) {
+          body.assignee_ids = this.draft.assignee_ids;
+        }
         // fromDateInput devolve null para o campo vazio: é o apagar.
         if (this.draft.deadline !== this.deadlineWas) body.deadline = WTT.fmt.fromDateInput(this.draft.deadline);
         // A trava só vai se mudou: a lista vazia a tira.
@@ -1225,7 +1277,30 @@ document.addEventListener('alpine:init', () => {
     },
     // gateStart é o modal da conta antes de começar a tarefa sem responsável (começar a torna da pessoa).
     async gateStart() {
-      return !!this.task.assignee_id || Alpine.store('accountGate').ask(this.task, 'start');
+      return (this.task.assignees || []).length > 0 || Alpine.store('accountGate').ask(this.task, 'start');
+    },
+    // mine diz se quem olha é um dos responsáveis.
+    mine() {
+      return !!this.task && (this.task.assignees || []).some((a) => a.id === me.id);
+    },
+    // canWork diz se a pessoa bate o ponto aqui: só nas tarefas dela ou na livre, que passa a ser dela (Decisão 31).
+    canWork() {
+      return !!this.task && ((this.task.assignees || []).length === 0 || this.mine());
+    },
+    // openAssignees abre o Editar detalhes, onde está a lista dos responsáveis.
+    openAssignees() {
+      this.openDetails();
+    },
+    // leave tira a pessoa da tarefa. Com o ponto aberto nela, o trecho dela na tarefa para (e a sessão fecha se era a
+    // única tarefa rodando), então pede confirmação antes.
+    async leave() {
+      if (this.isRunning() && !window.confirm(WTT.t('task_detail.leave_running'))) return undefined;
+      return this.run('claim', async () => {
+        const rest = (this.task.assignees || []).map((a) => a.id).filter((id) => id !== me.id);
+        this.setTask(await api('PATCH', '/api/tasks/' + this.taskId + '/attributes', { assignee_ids: rest }));
+        window.dispatchEvent(new CustomEvent('wtt:sessions-changed'));
+        toast(WTT.t('task_detail.left'));
+      });
     },
     // resumeAccount termina o que a pessoa começou antes de conectar a conta (pegar ou começar esta tarefa).
     resumeAccount() {
@@ -1239,11 +1314,6 @@ document.addEventListener('alpine:init', () => {
       if (back.task !== this.taskId) return;
       if (back.then === 'claim') this.claim();
       else if (back.then === 'start') this.sessionHere() ? this.addToSession() : this.start();
-    },
-    // Outra pessoa só pode ser responsável se estiver no projeto; quem saiu dele
-    // continua aparecendo enquanto for o responsável atual (ver setTask).
-    otherMembers() {
-      return this.members.filter((m) => m.id !== me.id);
     },
     async start() {
       if (!(await this.gateStart())) return;

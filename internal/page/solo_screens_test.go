@@ -187,22 +187,22 @@ func TestDedication_OnlyInSoloScreens(t *testing.T) {
 }
 
 // A tarefa nova do solo é sua: o modal não pergunta o responsável. Na página da tarefa ficam "Comigo" e "Sem
-// responsável", sem "Outra pessoa".
+// responsável", sem "Escolher pessoas" nem a lista de pessoas da equipe (Decisão 31).
 func TestTasks_NoOtherAssigneeInSolo(t *testing.T) {
 	project := &Crumb{ID: uuid.NewString(), Name: "Site"}
 	solo, team := pair(t, "project_tasks", func(s bool) Data {
 		return Data{Me: identity("admin", true, s), Project: project, Tab: "tasks", Script: "project"}
 	})
 	mustNotHave(t, "solo new task", solo, `name="task-assign"`)
-	mustHave(t, "team new task", team, `name="task-assign"`, `value="other"`)
+	mustHave(t, "team new task", team, `name="task-assign"`, `value="people"`, `class="list picker"`)
 
 	task := &Crumb{ID: uuid.NewString(), Name: "Home"}
 	solo, team = pair(t, "task_detail", func(s bool) Data {
 		return Data{Me: identity("admin", true, s), Project: project, Task: task, Script: "project"}
 	})
 	mustHave(t, "solo task detail", solo, `name="task-assign" value="me"`, `name="task-assign" value="none"`)
-	mustNotHave(t, "solo task detail", solo, `name="task-assign" value="other"`, `id="task-assignee"`)
-	mustHave(t, "team task detail", team, `name="task-assign" value="other"`, `id="task-assignee"`)
+	mustNotHave(t, "solo task detail", solo, `value="people"`, `class="list picker"`)
+	mustHave(t, "team task detail", team, `class="list picker"`, `data-field="assignee_ids"`)
 }
 
 // A visão geral do projeto no solo não tem pessoas, times, quem está trabalhando, filtro de pessoa nem custo e margem.

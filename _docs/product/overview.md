@@ -142,7 +142,7 @@ dois caminhos respondem `409 organization.solo_no_invites`.
 ## Tarefas
 
 **Campos.** Nome, descrição em Markdown (até 65.536 caracteres, o limite de uma issue do GitHub; sem imagens), status,
-prioridade, etiquetas, responsável e prazo. Sem prazo informado, a tarefa nasce com 7 dias.
+prioridade, etiquetas, responsáveis (até 10) e prazo. Sem prazo informado, a tarefa nasce com 7 dias.
 
 **Status.** Toda tarefa nasce em backlog. À mão, qualquer pessoa do projeto muda o status para qualquer outro. Alguns
 eventos o mudam sozinhos:
@@ -172,27 +172,30 @@ sincronização ligada (ver [../integrations/overview.md](../integrations/overvi
 **Etiquetas.** São de cada projeto e só têm nome (até 50 caracteres). Quem tem `labels.manage` cria, renomeia e exclui;
 os outros escolhem entre as que existem.
 
-**Responsável.** É opcional. A tarefa sem responsável fica disponível para o time e passa a ser de quem:
+**Responsáveis.** São opcionais, e uma tarefa pode ter vários ([Decisão 31](../architecture/decisions.md)). A tarefa
+sem responsável fica livre para o time e passa a ser de quem:
 
 - **bater o ponto** nela (ou a puser na sessão aberta);
 - **pegar** a tarefa (`POST /api/tasks/:taskId/claim`), que não abre ponto nem muda o status. Se duas pessoas pegam
-  juntas, só uma leva, e a outra recebe `409 task.already_assigned`.
+  juntas, só uma leva, e a outra recebe `409 task.already_assigned`. Pegar só vale na tarefa livre.
 
-Escolher outra pessoa como responsável só vale para quem está no projeto (`task.assignee_not_in_team`); para si mesmo,
-sempre vale.
+Numa tarefa com gente, um responsável acrescenta outras pessoas ("Acrescentar pessoas") e sai quando quer ("Sair da
+tarefa"); pôr alguém numa tarefa livre e tirar outra pessoa são do admin do projeto. Quem entra precisa estar no projeto
+(`task.assignee_not_in_team`). As regras estão em [permissions.md](permissions.md#responsáveis-da-tarefa).
 
 **Listas.**
 
-- **Lista de tarefas**: duas listas, as **sem responsável** (para o time pegar) e as **com responsável** de outras
-  pessoas. Busca e filtros por prazo, prioridade, status e etiqueta valem para as duas e ficam na URL. O filtro por
-  responsável só existe na segunda.
-- **Minhas tarefas**: as tarefas de que a pessoa é responsável, uma lista por status.
+- **Lista de tarefas**: duas listas, as **sem responsável** (para o time pegar) e as **com responsável** em que a
+  pessoa não está. Busca e filtros por prazo, prioridade, status e etiqueta valem para as duas e ficam na URL. O filtro
+  por responsável só existe na segunda. A coluna mostra o primeiro nome dos dois primeiros responsáveis e "+N".
+- **Minhas tarefas**: as tarefas de que a pessoa é uma das responsáveis, inclusive as divididas, uma lista por status.
 - **Tarefas**, no [modo solo](#modo-solo), no lugar das duas: todas as tarefas do projeto, uma lista por status, cada
   uma com a sua paginação, e o painel do timer em cima.
 
-**Editar.** O nome e a descrição vão por `PATCH /api/tasks/:taskId`. Os detalhes (status, prioridade, responsável, prazo
-e etiquetas) vão por `PATCH /api/tasks/:taskId/attributes`. A tela só manda o responsável e o prazo quando a pessoa os
-mudou, para não desfazer uma tarefa que alguém acabou de pegar nem cortar a hora de um prazo vindo do Trello.
+**Editar.** O nome e a descrição vão por `PATCH /api/tasks/:taskId`. Os detalhes (status, prioridade, responsáveis,
+prazo e etiquetas) vão por `PATCH /api/tasks/:taskId/attributes`. Fora do modo solo, o Editar detalhes mostra as
+pessoas do projeto, cada uma com a caixa que a regra deixa mexer. A tela só manda os responsáveis e o prazo quando a
+pessoa os mudou, para não desfazer uma tarefa que alguém acabou de pegar nem cortar a hora de um prazo vindo do Trello.
 
 **Excluir.** Qualquer pessoa do projeto exclui uma tarefa. A tarefa sai das sessões, mas as sessões e as horas ficam. Se
 ela está numa plataforma, o modal oferece apagar ou arquivar o item lá também (ver
@@ -207,7 +210,9 @@ quando:
 - a pessoa não tem valor por hora no projeto (`work_session.no_rate`);
 - ela já tem uma sessão aberta neste projeto (`work_session.already_open`): a tarefa entra nela com "Adicionar à
   sessão". O índice único parcial `one_open_session_per_project` garante isso no banco, inclusive com dois pedidos ao
-  mesmo tempo.
+  mesmo tempo;
+- a tarefa é de outras pessoas (`work_session.not_assignee`): cada um bate o ponto só nas suas tarefas, ou numa livre.
+  Na tarefa dividida, cada responsável bate o seu ponto, junto ou em horas diferentes.
 
 A sessão guarda os valores por hora do momento do clock-in (ver [money.md](money.md)). Se a tarefa não tinha
 responsável, passa a ser de quem bateu o ponto, e ela vai para em progresso.
@@ -218,9 +223,10 @@ projeto, é `work_session.not_open`.
 **Várias tarefas numa sessão.** A sessão começa por uma tarefa e pode ganhar outras, cada uma com o intervalo em que
 esteve nela (`WorkSessionTask`):
 
+- só entra uma tarefa da pessoa da sessão, ou uma livre (`work_session.not_assignee`);
 - numa sessão aberta, a tarefa entra agora, vai para em progresso e, se não tinha responsável, vira de quem está com o
   ponto;
-- numa sessão encerrada, entra do começo ao fim, sem mudar o status;
+- numa sessão encerrada, entra do começo ao fim, sem mudar o status nem os responsáveis;
 - a mesma tarefa pode entrar de novo, desde que os intervalos não se sobreponham (`work_session.task_overlap`);
 - a sessão nunca fica sem tarefa (`work_session.last_task`);
 - só quem bateu o ponto, o dono e os admins mexem nas tarefas de uma sessão, aberta ou encerrada.
@@ -278,9 +284,9 @@ abre os outros; o painel do timer do projeto mostra só a sessão dele.
     no último dia, o período aparece embaixo, porque ele não é a janela da coluna Horas. A linha de um cliente mensal com
     estimativa entra na tabela mesmo sem nada mais na janela.
 
-**Quem trabalha agora.** Para o dono e os admins, a Lista de tarefas marca se o responsável está com o ponto aberto, e a
-aba Colaboradores do projeto mostra em que tarefa cada um está. Os dois leem `GET /api/orgs/:orgId/working-now`, que
-não leva tempo nem dinheiro, e se atualizam a cada 30 segundos.
+**Quem trabalha agora.** Para o dono e os admins, a Lista de tarefas marca se algum responsável está com o ponto
+aberto, e a aba Colaboradores do projeto mostra em que tarefa cada um está. Os dois leem
+`GET /api/orgs/:orgId/working-now`, que não leva tempo nem dinheiro, e se atualizam a cada 30 segundos.
 
 **Nenhuma tela ranqueia pessoas por horas.** Os painéis mostram quem trabalha agora e em quê, e nunca ordenam nem
 comparam pessoas pelo tempo. Comparar horas sugere que quem trabalhou mais merece mais reconhecimento, e o valor

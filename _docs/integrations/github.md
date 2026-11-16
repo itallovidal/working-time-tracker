@@ -66,7 +66,7 @@ as duas ficam iguais. **Se os dois lados mudam o mesmo campo entre duas rodadas,
 | Corpo ↔ descrição | Igual ao título |
 | Etiquetas | Cada lado soma e tira o que fez. A etiqueta que o repositório não tem é criada antes (o GitHub a descartaria sem avisar). Renomear ou excluir uma etiqueta aqui mexe nas issues das tarefas que a têm |
 | Estado | A tarefa Fechada fecha a issue como concluída, e reabrir reabre. A issue fechada fecha a tarefa, e a reaberta tira a tarefa de Fechada para backlog |
-| Responsável | Pelo e-mail público (ver abaixo) |
+| Responsáveis | Pessoa a pessoa, pela conta ou pelo e-mail público (ver abaixo) |
 
 Ficam de fora: projetos, milestone, comentários e pull requests. Prazo, prioridade, horas e os status Em progresso e
 Aguardando fechamento ficam só aqui.
@@ -84,10 +84,11 @@ Aguardando fechamento ficam só aqui.
   marcada, a issue é apagada pelo GraphQL (`deleteIssue`), o único jeito de apagar uma issue, e só para quem é
   **admin do repositório**. Sem isso, ela é fechada como não planejada, com o aviso `issue_sync.remove_only_closed`.
 
-### Responsável
+### Responsáveis
 
-A tarefa tem um responsável só, e a issue pode ter vários. A ligação é pela **conta** da pessoa no GitHub, e, sem ela,
-pelo **e-mail público** do usuário (ver [contas das pessoas](overview.md#contas-das-pessoas)):
+A tarefa tem até 10 responsáveis, como a issue do GitHub (Decisão 31). Cada login se liga a uma pessoa pela **conta**
+dela no GitHub, e, sem ela, pelo **e-mail público** do usuário (ver
+[contas das pessoas](overview.md#contas-das-pessoas)):
 
 - Cada pessoa liga a conta no perfil, em **Contas conectadas** (ou no modal que aparece ao pegar uma tarefa ligada a
   uma issue). Quem conecta a integração já fica com a conta com que autorizou, e quem gerencia as integrações liga os
@@ -96,17 +97,20 @@ pelo **e-mail público** do usuário (ver [contas das pessoas](overview.md#conta
   no sistema. Sem essa conferência, uma issue ligaria a tarefa a alguém de outra empresa.
 - Do lado de cá para lá, o login é o da conta da pessoa; sem conta, o da busca de usuários pelo e-mail, que só vale se
   o e-mail é de **um único** usuário. Quem disse que não tem conta não é procurado.
-- Só o login **ligado** é mexido. Os outros responsáveis da issue ficam como estão nos dois sentidos.
-- Tirar o responsável no GitHub tira daqui, e o contrário também.
-- Escolher aqui alguém sem conta e sem usuário que se ache pelo e-mail não manda nada e deixa o aviso
-  `issue_sync.no_login`.
+- Todo login **ligado** a alguém do projeto é um responsável da tarefa. Os outros responsáveis da issue ficam como
+  estão nos dois sentidos.
+- Tirar um responsável no GitHub tira daqui, e o contrário também, pessoa a pessoa (ver
+  [os responsáveis](overview.md#os-responsáveis)). Quem é tirado com o ponto aberto na tarefa tem o trecho parado.
+- Pôr aqui alguém sem conta e sem usuário que se ache pelo e-mail não manda o login dele e deixa o aviso
+  `issue_sync.no_login`; os outros vão.
 - Quem conecta a conta (ou publica o e-mail) depois passa a ser reconhecido na rodada seguinte. O botão Sincronizar
   pergunta tudo de novo.
 - A tarefa importada de uma issue nasce **só para quem tem conta no GitHub** (`required_accounts`); quem edita a tarefa
   tira a marca.
 
-O cartão da integração lista os logins de responsáveis sem correspondência (`sync_unmatched_logins`). Nesse caso a
-tarefa fica sem responsável, disponível para alguém pegar.
+O cartão da integração lista os logins de responsáveis sem correspondência (`sync_unmatched_logins`): todos os das
+issues abertas que não se ligam a ninguém. Uma issue só com esses logins vira uma tarefa livre, disponível para alguém
+pegar.
 
 ### As rodadas no GitHub
 

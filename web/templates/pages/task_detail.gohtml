@@ -16,12 +16,12 @@
         {{/* Sem responsável, dá para pegar a tarefa sem bater o ponto: ela passa a ser da pessoa e o ponto fica para depois.
              No modo solo não há a quem mais a tarefa iria: Iniciar já a passa para você (Decisão 28). */}}
         {{if not .Me.OrganizationSolo}}
-        <button type="button" class="btn btn-secondary btn-sm" x-show="task && !task.assignee_id" :disabled="pending" title="{{.T "task_detail.claim_title"}}" @click="claim()">{{template "icon" "user-plus"}} {{.T "task_detail.claim"}}</button>
+        <button type="button" class="btn btn-secondary btn-sm" x-show="task && task.assignees.length === 0" :disabled="pending" title="{{.T "task_detail.claim_title"}}" @click="claim()">{{template "icon" "user-plus"}} {{.T "task_detail.claim"}}</button>
         {{end}}
         {{/* Parado, inicia o ponto deste projeto (o de outro projeto segue correndo); com o ponto aberto aqui, põe a tarefa
-             na sessão. */}}
-        <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning() && !sessionHere()" :disabled="pending" @click="start()">{{template "icon" "play"}} {{.T "tasks.start"}}</button>
-        <button type="button" class="btn btn-secondary btn-sm" x-show="!isRunning() && sessionHere()" :disabled="pending" @click="addToSession()">{{template "icon" "plus"}} {{.T "session.add_to_session"}}</button>
+             na sessão. Só na tarefa de que a pessoa é responsável, ou na livre, que passa a ser dela (Decisão 31). */}}
+        <button type="button" class="btn btn-secondary btn-sm" x-show="canWork() && !isRunning() && !sessionHere()" :disabled="pending" @click="start()">{{template "icon" "play"}} {{.T "tasks.start"}}</button>
+        <button type="button" class="btn btn-secondary btn-sm" x-show="canWork() && !isRunning() && sessionHere()" :disabled="pending" @click="addToSession()">{{template "icon" "plus"}} {{.T "session.add_to_session"}}</button>
         {{/* Em andamento, para só esta tarefa: a sessão segue com as outras, e sendo a única o ponto é encerrado. */}}
         <button type="button" class="btn btn-secondary btn-sm" x-show="isRunning()" :disabled="pending" title="{{.T "session.stop_task_hint"}}" @click="stopTask()">{{template "icon" "stop"}} {{.T "session.stop_task"}}</button>
       </div>
@@ -99,16 +99,26 @@
             </dd>
           </div>
           <div class="detail-row">
-            <dt>{{.T "tasks.col_assignee"}}</dt>
+            <dt x-text="task && task.assignees.length > 1 ? $t('tasks.assignees.label') : $t('tasks.col_assignee')">{{.T "tasks.col_assignee"}}</dt>
             <dd>
-              <div class="person-line" x-show="task && task.assignee">
-                <span class="avatar" aria-hidden="true" x-text="task && task.assignee ? WTT.fmt.initials(task.assignee.name) : ''"></span>
-                <span class="grow">
-                  <span class="person-name" x-text="task && task.assignee ? task.assignee.name : ''"></span>
-                  <span class="muted small person-email" x-text="task && task.assignee ? task.assignee.email : ''"></span>
-                </span>
+              {{/* Uma linha por responsável (Decisão 31). */}}
+              <template x-for="a in (task ? task.assignees : [])" :key="a.id">
+                <div class="person-line">
+                  <span class="avatar" aria-hidden="true" x-text="WTT.fmt.initials(a.name)"></span>
+                  <span class="grow">
+                    <span class="person-name"><span x-text="a.name"></span><span class="muted nowrap" x-show="a.id === WTT.boot.me.id && !WTT.boot.me.organization_solo"> · {{.T "tasks.assignees.you"}}</span></span>
+                    <span class="muted small person-email" x-text="a.email"></span>
+                  </span>
+                </div>
+              </template>
+              {{if not .Me.OrganizationSolo}}
+              {{/* Acrescentar abre o Editar detalhes, onde está a lista; é de quem está na tarefa e do admin do projeto. */}}
+              <div class="row row-tight" x-cloak x-show="task && task.assignees.length > 0 && (mine() || manageAssignees())">
+                <button type="button" class="btn btn-secondary btn-sm" @click="openAssignees()">{{template "icon" "user-plus"}} {{.T "task_detail.add_people"}}</button>
+                <button type="button" class="btn btn-secondary btn-sm" x-show="mine()" :disabled="pending" @click="leave()">{{.T "task_detail.leave"}}</button>
               </div>
-              <div x-show="task && !task.assignee">
+              {{end}}
+              <div x-show="task && task.assignees.length === 0">
                 <span class="badge">{{.T "tasks.unassigned"}}</span>
                 <p class="muted small hint-line">{{if .Me.OrganizationSolo}}{{.T "tasks.unassigned_hint_solo"}}{{else}}{{.T "tasks.unassigned_hint"}}{{end}}</p>
               </div>
@@ -277,7 +287,7 @@
       <p class="muted small" x-cloak x-show="syncs()">{{.T "task_detail.sync_note_details"}}</p>
       {{template "task_status" .}}
       {{template "task_priority" .}}
-      {{template "task_assignee" .}}
+      {{if .Me.OrganizationSolo}}{{template "task_assignee" .}}{{else}}{{template "task_assignees_edit" .}}{{end}}
       <div class="field">
         {{template "field_label" (dict "D" . "For" "task-deadline" "Key" "tasks.col_deadline" "Optional" true)}}
         <span class="date-input"><input id="task-deadline" type="text" data-field="deadline" x-date="draft.deadline" @input="clearField('deadline')"

@@ -79,11 +79,11 @@ func TestMerge_DeadlineIsIgnoredWithoutTheOption(t *testing.T) {
 func TestMerge_WithoutAssigneeSkipsTheAssignee(t *testing.T) {
 	res := newResolver()
 	b, r, l := agreed()
-	b.MappedLogin, b.MappedPerson, b.Logins = "", nil, nil
+	b.Mapped, b.Logins = nil, nil
 	r.Assignee = nil
-	l.Person = pid(cai) // tem responsável aqui, mas ninguém acha o login dele
+	l.People = ids(cai) // tem responsável aqui, mas ninguém acha o login dele
 	plan := mergeWith(t, b, r, l, res, WithoutAssignee())
-	if plan.Problem != "" || plan.Push.Assignees != nil || plan.Local.SetAssignee {
+	if plan.Problem != "" || plan.Push.Assignees != nil || len(plan.Local.AddPeople) > 0 {
 		t.Errorf("plan = %+v, want the assignee left alone", plan)
 	}
 	if res.asked != 0 {

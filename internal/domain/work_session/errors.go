@@ -22,6 +22,9 @@ var (
 	ErrTaskRequired         = apperr.New("work_session.task_required", http.StatusBadRequest)
 	ErrPersonRequired       = apperr.New("work_session.person_required", http.StatusBadRequest)
 	ErrOtherPersonAdminOnly = apperr.New("work_session.other_person_admin_only", http.StatusForbidden)
+	// ErrNotAssignee é bater o ponto (ou pôr na sessão) uma tarefa de que a pessoa não é responsável: cada um bate o
+	// ponto nas suas, e a tarefa livre passa a ser de quem bate (Decisão 31).
+	ErrNotAssignee = apperr.New("work_session.not_assignee", http.StatusForbidden)
 
 	// As tarefas da sessão.
 	ErrSessionNotFound  = apperr.New("work_session.not_found", http.StatusNotFound)

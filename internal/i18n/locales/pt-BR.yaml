@@ -884,7 +884,7 @@ help:
     tasks:
       title: Crie as tarefas
       text: "Dê um nome à tarefa e, se quiser, uma descrição, o prazo, a prioridade, as etiquetas e o responsável. A tarefa nasce em Backlog; sem prazo, o app usa 7 dias a partir de hoje."
-      tip: "Tarefa sem responsável fica disponível para o time: quem iniciar o ponto nela passa a ser o responsável. O responsável precisa estar no projeto."
+      tip: "Tarefa sem responsável fica disponível para o time: quem iniciar o ponto nela passa a ser o responsável. Uma tarefa pode ter vários responsáveis, todos do projeto: quem está nela acrescenta outras pessoas, e quem administra o projeto escolhe quem quiser. Só quem é responsável bate o ponto nela."
       tip_solo: "A tarefa nova já é sua. Uma sem responsável (vinda do GitHub, do GitLab ou do Trello, por exemplo) passa para você quando você iniciar o ponto nela."
     track:
       title: Registre as horas
@@ -959,7 +959,7 @@ help:
       filters: "A busca e os filtros (prazo, prioridade, status e etiquetas) ficam na URL: dá para guardar ou mandar o link da lista filtrada."
       new: "“Nova tarefa” abre um formulário em passos: a tarefa, os detalhes e, se o projeto tem integrações, as plataformas onde ela também deve existir."
       open: "Clique numa linha para abrir a tarefa."
-      presence: "Para o dono e os administradores, uma bolinha ao lado do responsável mostra se ele está com o ponto aberto agora: verde, sim; cinza, não. Passe o mouse para ver em que tarefa."
+      presence: "Para o dono e os administradores, uma bolinha ao lado dos responsáveis mostra se algum deles está com o ponto aberto agora: verde, sim; cinza, não. Passe o mouse para ver quem e em que tarefa."
     project_people:
       title: "Projeto: Colaboradores"
       text: "Quem trabalha no projeto e em quais times, em duas visões: Pessoas e Times. Aqui é só para ler; para mudar alguma coisa, use a Gestão."
@@ -1365,7 +1365,14 @@ tasks:
   due_date: Prazo até a data
   unassigned: Sem responsável
   assign_me: Atribuir a mim
-  assign_other: Outra pessoa
+  assign_people: Escolher pessoas
+  assignees:
+    label: Responsáveis
+    search: Buscar uma pessoa
+    you: você
+    hint_free: "Você pode pegar a tarefa para você; escolher outra pessoa é com quem administra o projeto."
+    hint_mine: "Você acrescenta outras pessoas e pode sair; tirar alguém é com quem administra o projeto."
+    hint_other: "Só quem está na tarefa, ou administra o projeto, muda os responsáveis."
   col_priority: Prioridade
   priority_filter: Filtrar por prioridade
   priority:
@@ -1397,7 +1404,6 @@ tasks:
     next: Próximo
     back: Voltar
     name_required: Informe o nome da tarefa.
-    pick_person: Escolha a pessoa responsável.
   md:
     label: Modo da descrição
     write: Escrever
@@ -1410,7 +1416,6 @@ tasks:
   no_labels_member: O projeto ainda não tem etiquetas. Peça a um admin para criar.
   label_new: Nova etiqueta
   label_create: Criar
-  pick_person: Escolha a pessoa
   unassigned_hint: "Sem responsável, a tarefa fica disponível: quem bater o ponto nela passa a ser o responsável."
   unassigned_hint_solo: "Sem responsável, a tarefa passa para você quando você bater o ponto nela."
   new: Nova tarefa
@@ -1519,6 +1524,10 @@ task_detail:
   claim: Pegar tarefa
   claim_title: Associar a tarefa a mim, sem iniciar o ponto
   claimed: Você pegou a tarefa. Ela está em Minhas tarefas.
+  add_people: Acrescentar pessoas
+  leave: Sair da tarefa
+  left: Você saiu da tarefa.
+  leave_running: "Você está com o ponto aberto nesta tarefa. Ao sair, o seu trecho nela para agora. Sair mesmo assim?"
   back: Voltar à lista
   breadcrumb: Você está em
   no_description: Esta tarefa não tem descrição.
@@ -1745,7 +1754,7 @@ integration_types:
     pick_loading: Carregando os repositórios…
     pick_hint: A lista traz os repositórios que a sua conta enxerga. Se um repositório de uma organização não aparecer, o dono da organização precisa aprovar o app nas configurações dela, em acesso de aplicativos de terceiros.
     sync_label: "Sincronizar as issues deste repositório com as tarefas"
-    sync_hint: "As issues abertas viram tarefas, e o nome, a descrição, as etiquetas, o responsável e o fechamento ficam iguais nos dois lados, para qualquer lado que mude. O responsável é ligado pelo e-mail público do usuário no GitHub. Se os dois lados mudarem o mesmo campo, vale o do GitHub. Prioridade, prazo, horas e os status Em progresso e Aguardando fechamento ficam só aqui."
+    sync_hint: "As issues abertas viram tarefas, e o nome, a descrição, as etiquetas, os responsáveis e o fechamento ficam iguais nos dois lados, para qualquer lado que mude. Cada responsável é ligado pela conta que a pessoa conectou ou pelo e-mail público dela no GitHub. Se os dois lados mudarem o mesmo campo, vale o do GitHub. Prioridade, prazo, horas e os status Em progresso e Aguardando fechamento ficam só aqui."
     connect_unconfigured: A conexão com o GitHub não está configurada neste servidor. Quem administra precisa definir GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET e PUBLIC_URL.
     fields:
       repo:
@@ -1761,7 +1770,7 @@ integration_types:
     pick_loading: Carregando os projetos…
     pick_hint: A lista traz os projetos de que a sua conta é membro. Um projeto que não aparece se digita como grupo/projeto.
     sync_label: "Sincronizar as issues deste projeto com as tarefas"
-    sync_hint: "As issues abertas viram tarefas, e o nome, a descrição, as etiquetas, o responsável e o fechamento ficam iguais nos dois lados, para qualquer lado que mude. O responsável é ligado pelo e-mail público do usuário no GitLab. Se os dois lados mudarem o mesmo campo, vale o do GitLab. Prioridade, prazo, horas e os status Em progresso e Aguardando fechamento ficam só aqui."
+    sync_hint: "As issues abertas viram tarefas, e o nome, a descrição, as etiquetas, os responsáveis e o fechamento ficam iguais nos dois lados, para qualquer lado que mude. Cada responsável é ligado pela conta que a pessoa conectou ou pelo e-mail público dela no GitLab; o GitLab grátis guarda um responsável só por issue. Se os dois lados mudarem o mesmo campo, vale o do GitLab. Prioridade, prazo, horas e os status Em progresso e Aguardando fechamento ficam só aqui."
     connect_unconfigured: A conexão com o GitLab não está configurada neste servidor. Quem administra precisa definir GITLAB_CLIENT_ID, GITLAB_CLIENT_SECRET e PUBLIC_URL.
     fields:
       project_url:
@@ -2184,6 +2193,7 @@ errors:
     link_not_in_project: "Escolha alguém que está no projeto."
     no_login: "não achei, na plataforma, o usuário de quem é responsável aqui: ele precisa conectar a conta no perfil (Contas conectadas)"
     push_discarded: "a plataforma ignorou uma mudança deste item (o token pode não ter permissão de escrita): ela fica só aqui"
+    single_assignee: "a issue ficou com um responsável só (o GitLab grátis aceita um por issue): aqui a tarefa continua com todos"
     push_rejected: "a plataforma recusou uma mudança deste item: ela fica só aqui"
     read_only: "o token não escreve neste repositório ou quadro: os itens só vêm para cá, e as mudanças daqui não saem"
     publish_read_only: "o token desta integração não escreve no repositório ou quadro: o item novo sairia sem parte dos dados, então a tarefa não foi postada"
@@ -2195,7 +2205,7 @@ errors:
     name_too_long: "o nome da etiqueta aceita até {{.max}} caracteres"
     not_found: "etiqueta não encontrada"
   mcp:
-    invalid_assignee: "o responsável é me (você) ou none (ninguém)"
+    invalid_assignee: "cada pessoa é me (você) ou o id dela (list_people)"
     invalid_date: "data inválida em {{.field}}: use AAAA-MM-DD"
     task_already_active: "esta tarefa já está em andamento na sessão"
     task_not_in_session: "esta tarefa não está em andamento na sessão aberta"
@@ -2304,7 +2314,10 @@ errors:
     integration_other_project: "a integração é de outro projeto"
     integrations_unavailable: "integrações indisponíveis"
     invalid_assignee: "responsável inválido"
-    already_assigned: "esta tarefa já tem responsável"
+    already_assigned: "esta tarefa já tem responsável: peça a quem está nela para acrescentar você"
+    share_forbidden: "só quem é responsável pela tarefa, ou administra o projeto, põe outra pessoa nela"
+    remove_forbidden: "só quem administra o projeto tira outra pessoa da tarefa; você pode sair dela"
+    too_many_assignees: "uma tarefa tem no máximo {{.max}} responsáveis"
     already_linked: "a tarefa já está ligada a um item desta integração"
     invalid_assignee_filter: "responsável inválido (assignee_id)"
     invalid_deadline_filter: "prazo inválido (deadline_to): use data e hora, como 2026-10-12T23:59:59Z"
@@ -2339,6 +2352,7 @@ errors:
     no_rate: "esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto"
     not_found: "sessão não encontrada"
     not_open: "não há ponto aberto para esta pessoa neste projeto"
+    not_assignee: "você só bate o ponto nas tarefas de que é responsável; peça a quem está nesta para acrescentar você"
     not_yours: "só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão"
     other_person_admin_only: "só admins podem registrar o ponto de outra pessoa"
     person_not_found: "pessoa não encontrada"
@@ -2418,6 +2432,7 @@ fields:
   status: "o status"
   required_accounts: "a trava do responsável"
   assignee_id: "o responsável"
+  assignee_ids: "os responsáveis"
   assignee: "o responsável"
   days: "a validade"
   query: "a busca"

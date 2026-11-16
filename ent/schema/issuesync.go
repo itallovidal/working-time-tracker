@@ -44,10 +44,10 @@ func (IssueSync) Fields() []ent.Field {
 		field.String("body").Default(""),
 		field.JSON("labels", []string{}).Optional(),
 		field.JSON("assignee_logins", []string{}).Optional(),
-		// O login do GitHub que o responsável da tarefa representa, e a pessoa que ele era quando se
-		// ligou. Sem chave estrangeira: a pessoa pode sair, e o snapshot só serve de comparação.
-		field.String("mapped_login").Default(""),
-		field.UUID("mapped_person_id", uuid.UUID{}).Optional().Nillable(),
+		// Os logins da issue que são responsáveis da tarefa, cada um com a pessoa que ele era quando se ligou
+		// (login -> id da pessoa). Sem chave estrangeira: a pessoa pode sair, e o snapshot só serve de comparação.
+		// Os logins da issue que não estão aqui não se ligam a ninguém do projeto e ficam como estão.
+		field.JSON("mapped", map[string]string{}).Optional(),
 		// O prazo do último acordo; nulo é sem prazo (e todo tipo que não espelha o prazo).
 		field.Time("deadline").Optional().Nillable(),
 

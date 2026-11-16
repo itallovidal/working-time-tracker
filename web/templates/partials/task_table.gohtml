@@ -38,15 +38,16 @@
           <td>
             <span class="badge" :class="priorityClass(t.priority)" x-text="WTT.fmt.priority(t.priority)"></span>
           </td>
+          {{/* Os responsáveis: os dois primeiros nomes e, passando disso, quantos mais (Decisão 31); a dica tem todos. */}}
           <td x-show="{{$.Assignee}}">
             {{if .IsAdmin}}
-            {{/* Só o dono e os admins: a bolinha diz se o responsável está com o ponto aberto agora, em qualquer projeto; a dica diz em quê. */}}
+            {{/* Só o dono e os admins: a bolinha diz se alguém da tarefa está com o ponto aberto agora, em qualquer projeto; a dica diz quem e em quê. */}}
             <span class="presence-cell">
-              <span class="presence-dot" role="img" x-show="t.assignee_id" :class="{ 'is-on': $store.presence.working(t.assignee_id) }" :title="$store.presence.label(t.assignee_id)" :aria-label="$store.presence.label(t.assignee_id)"></span>
-              <span x-text="t.assignee ? t.assignee.name : ''"></span>
+              <span class="presence-dot" role="img" x-show="t.assignees.length" :class="{ 'is-on': $store.presence.anyWorking(t.assignees) }" :title="$store.presence.labelMany(t.assignees)" :aria-label="$store.presence.labelMany(t.assignees)"></span>
+              <span class="nowrap" :title="WTT.fmt.assigneesFull(t.assignees)"><span x-text="WTT.fmt.assigneeNames(t.assignees)"></span> <span class="muted" x-show="t.assignees.length > 2" x-text="WTT.fmt.assigneesMore(t.assignees)"></span></span>
             </span>
             {{else}}
-            <span x-text="t.assignee ? t.assignee.name : ''"></span>
+            <span class="nowrap" :title="WTT.fmt.assigneesFull(t.assignees)"><span x-text="WTT.fmt.assigneeNames(t.assignees)"></span> <span class="muted" x-show="t.assignees.length > 2" x-text="WTT.fmt.assigneesMore(t.assignees)"></span></span>
             {{end}}
           </td>
           <td>
@@ -65,7 +66,7 @@
           {{if eq $.Action "claim"}}
           {{/* Pegar é ficar com a tarefa sem bater o ponto: ela sai desta lista e vai para Minhas tarefas. */}}
           <td class="actions" x-show="{{$.ActionShow}}">
-            <button type="button" class="btn btn-secondary btn-sm" x-show="!t.assignee_id" :disabled="pending" :title="$t('tasks.claim_title')" :aria-label="$t('tasks.claim_label', { name: t.name })" @click="claim(t)">{{template "icon" "user-plus"}} {{.T "tasks.claim"}}</button>
+            <button type="button" class="btn btn-secondary btn-sm" x-show="t.assignees.length === 0" :disabled="pending" :title="$t('tasks.claim_title')" :aria-label="$t('tasks.claim_label', { name: t.name })" @click="claim(t)">{{template "icon" "user-plus"}} {{.T "tasks.claim"}}</button>
           </td>
           {{else if eq $.Action "start"}}
           {{/* Com o ponto aberto neste projeto, o botão põe a tarefa na sessão; com ele aberto em outro, fica desabilitado. */}}

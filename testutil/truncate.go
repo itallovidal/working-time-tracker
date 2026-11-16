@@ -12,7 +12,7 @@ func Truncate(t testing.TB, db *sql.DB) {
 	if _, err := db.Exec(`TRUNCATE TABLE
 		sessions, api_tokens, oauth_access_tokens, oauth_grants, person_accounts, invites, issue_syncs,
 		work_session_tasks, work_sessions, tasks, team_memberships, teams, payouts, integrations, allocations,
-		task_labels, labels, projects, customers, persons, organizations CASCADE`); err != nil {
+		task_assignees, task_labels, labels, projects, customers, persons, organizations CASCADE`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }

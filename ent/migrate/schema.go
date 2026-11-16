@@ -205,8 +205,7 @@ var (
 		{Name: "body", Type: field.TypeString, Default: ""},
 		{Name: "labels", Type: field.TypeJSON, Nullable: true},
 		{Name: "assignee_logins", Type: field.TypeJSON, Nullable: true},
-		{Name: "mapped_login", Type: field.TypeString, Default: ""},
-		{Name: "mapped_person_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "mapped", Type: field.TypeJSON, Nullable: true},
 		{Name: "deadline", Type: field.TypeTime, Nullable: true},
 		{Name: "stuck_sig", Type: field.TypeString, Default: ""},
 		{Name: "last_error", Type: field.TypeString, Default: ""},
@@ -223,13 +222,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "issue_syncs_integrations_issue_syncs",
-				Columns:    []*schema.Column{IssueSyncsColumns[15]},
+				Columns:    []*schema.Column{IssueSyncsColumns[14]},
 				RefColumns: []*schema.Column{IntegrationsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "issue_syncs_tasks_issue_syncs",
-				Columns:    []*schema.Column{IssueSyncsColumns[16]},
+				Columns:    []*schema.Column{IssueSyncsColumns[15]},
 				RefColumns: []*schema.Column{TasksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -238,12 +237,12 @@ var (
 			{
 				Name:    "issuesync_integration_id_item_id",
 				Unique:  true,
-				Columns: []*schema.Column{IssueSyncsColumns[15], IssueSyncsColumns[1]},
+				Columns: []*schema.Column{IssueSyncsColumns[14], IssueSyncsColumns[1]},
 			},
 			{
 				Name:    "issuesync_task_id_integration_id",
 				Unique:  true,
-				Columns: []*schema.Column{IssueSyncsColumns[16], IssueSyncsColumns[15]},
+				Columns: []*schema.Column{IssueSyncsColumns[15], IssueSyncsColumns[14]},
 			},
 		},
 	}
@@ -621,7 +620,6 @@ var (
 		{Name: "deadline", Type: field.TypeTime, Nullable: true},
 		{Name: "required_accounts", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "assignee_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "project_id", Type: field.TypeUUID},
 	}
 	// TasksTable holds the schema information for the "tasks" table.
@@ -631,14 +629,8 @@ var (
 		PrimaryKey: []*schema.Column{TasksColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "tasks_persons_tasks",
-				Columns:    []*schema.Column{TasksColumns[8]},
-				RefColumns: []*schema.Column{PersonsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-			{
 				Symbol:     "tasks_projects_tasks",
-				Columns:    []*schema.Column{TasksColumns[9]},
+				Columns:    []*schema.Column{TasksColumns[8]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -782,6 +774,31 @@ var (
 			},
 		},
 	}
+	// TaskAssigneesColumns holds the columns for the "task_assignees" table.
+	TaskAssigneesColumns = []*schema.Column{
+		{Name: "task_id", Type: field.TypeUUID},
+		{Name: "person_id", Type: field.TypeUUID},
+	}
+	// TaskAssigneesTable holds the schema information for the "task_assignees" table.
+	TaskAssigneesTable = &schema.Table{
+		Name:       "task_assignees",
+		Columns:    TaskAssigneesColumns,
+		PrimaryKey: []*schema.Column{TaskAssigneesColumns[0], TaskAssigneesColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "task_assignees_task_id",
+				Columns:    []*schema.Column{TaskAssigneesColumns[0]},
+				RefColumns: []*schema.Column{TasksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "task_assignees_person_id",
+				Columns:    []*schema.Column{TaskAssigneesColumns[1]},
+				RefColumns: []*schema.Column{PersonsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// TaskLabelsColumns holds the columns for the "task_labels" table.
 	TaskLabelsColumns = []*schema.Column{
 		{Name: "task_id", Type: field.TypeUUID},
@@ -830,6 +847,7 @@ var (
 		TeamMembershipsTable,
 		WorkSessionsTable,
 		WorkSessionTasksTable,
+		TaskAssigneesTable,
 		TaskLabelsTable,
 	}
 )
@@ -864,8 +882,7 @@ func init() {
 	ReceivablesTable.ForeignKeys[0].RefTable = CustomersTable
 	ReceivablesTable.ForeignKeys[1].RefTable = OrganizationsTable
 	SessionsTable.ForeignKeys[0].RefTable = PersonsTable
-	TasksTable.ForeignKeys[0].RefTable = PersonsTable
-	TasksTable.ForeignKeys[1].RefTable = ProjectsTable
+	TasksTable.ForeignKeys[0].RefTable = ProjectsTable
 	TeamsTable.ForeignKeys[0].RefTable = ProjectsTable
 	TeamMembershipsTable.ForeignKeys[0].RefTable = PersonsTable
 	TeamMembershipsTable.ForeignKeys[1].RefTable = TeamsTable
@@ -873,6 +890,8 @@ func init() {
 	WorkSessionsTable.ForeignKeys[1].RefTable = ProjectsTable
 	WorkSessionTasksTable.ForeignKeys[0].RefTable = TasksTable
 	WorkSessionTasksTable.ForeignKeys[1].RefTable = WorkSessionsTable
+	TaskAssigneesTable.ForeignKeys[0].RefTable = TasksTable
+	TaskAssigneesTable.ForeignKeys[1].RefTable = PersonsTable
 	TaskLabelsTable.ForeignKeys[0].RefTable = TasksTable
 	TaskLabelsTable.ForeignKeys[1].RefTable = LabelsTable
 }

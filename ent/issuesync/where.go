@@ -86,16 +86,6 @@ func Body(v string) predicate.IssueSync {
 	return predicate.IssueSync(sql.FieldEQ(FieldBody, v))
 }
 
-// MappedLogin applies equality check predicate on the "mapped_login" field. It's identical to MappedLoginEQ.
-func MappedLogin(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldEQ(FieldMappedLogin, v))
-}
-
-// MappedPersonID applies equality check predicate on the "mapped_person_id" field. It's identical to MappedPersonIDEQ.
-func MappedPersonID(v uuid.UUID) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldEQ(FieldMappedPersonID, v))
-}
-
 // Deadline applies equality check predicate on the "deadline" field. It's identical to DeadlineEQ.
 func Deadline(v time.Time) predicate.IssueSync {
 	return predicate.IssueSync(sql.FieldEQ(FieldDeadline, v))
@@ -471,119 +461,14 @@ func AssigneeLoginsNotNil() predicate.IssueSync {
 	return predicate.IssueSync(sql.FieldNotNull(FieldAssigneeLogins))
 }
 
-// MappedLoginEQ applies the EQ predicate on the "mapped_login" field.
-func MappedLoginEQ(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldEQ(FieldMappedLogin, v))
+// MappedIsNil applies the IsNil predicate on the "mapped" field.
+func MappedIsNil() predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldIsNull(FieldMapped))
 }
 
-// MappedLoginNEQ applies the NEQ predicate on the "mapped_login" field.
-func MappedLoginNEQ(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldNEQ(FieldMappedLogin, v))
-}
-
-// MappedLoginIn applies the In predicate on the "mapped_login" field.
-func MappedLoginIn(vs ...string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldIn(FieldMappedLogin, vs...))
-}
-
-// MappedLoginNotIn applies the NotIn predicate on the "mapped_login" field.
-func MappedLoginNotIn(vs ...string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldNotIn(FieldMappedLogin, vs...))
-}
-
-// MappedLoginGT applies the GT predicate on the "mapped_login" field.
-func MappedLoginGT(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldGT(FieldMappedLogin, v))
-}
-
-// MappedLoginGTE applies the GTE predicate on the "mapped_login" field.
-func MappedLoginGTE(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldGTE(FieldMappedLogin, v))
-}
-
-// MappedLoginLT applies the LT predicate on the "mapped_login" field.
-func MappedLoginLT(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldLT(FieldMappedLogin, v))
-}
-
-// MappedLoginLTE applies the LTE predicate on the "mapped_login" field.
-func MappedLoginLTE(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldLTE(FieldMappedLogin, v))
-}
-
-// MappedLoginContains applies the Contains predicate on the "mapped_login" field.
-func MappedLoginContains(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldContains(FieldMappedLogin, v))
-}
-
-// MappedLoginHasPrefix applies the HasPrefix predicate on the "mapped_login" field.
-func MappedLoginHasPrefix(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldHasPrefix(FieldMappedLogin, v))
-}
-
-// MappedLoginHasSuffix applies the HasSuffix predicate on the "mapped_login" field.
-func MappedLoginHasSuffix(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldHasSuffix(FieldMappedLogin, v))
-}
-
-// MappedLoginEqualFold applies the EqualFold predicate on the "mapped_login" field.
-func MappedLoginEqualFold(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldEqualFold(FieldMappedLogin, v))
-}
-
-// MappedLoginContainsFold applies the ContainsFold predicate on the "mapped_login" field.
-func MappedLoginContainsFold(v string) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldContainsFold(FieldMappedLogin, v))
-}
-
-// MappedPersonIDEQ applies the EQ predicate on the "mapped_person_id" field.
-func MappedPersonIDEQ(v uuid.UUID) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldEQ(FieldMappedPersonID, v))
-}
-
-// MappedPersonIDNEQ applies the NEQ predicate on the "mapped_person_id" field.
-func MappedPersonIDNEQ(v uuid.UUID) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldNEQ(FieldMappedPersonID, v))
-}
-
-// MappedPersonIDIn applies the In predicate on the "mapped_person_id" field.
-func MappedPersonIDIn(vs ...uuid.UUID) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldIn(FieldMappedPersonID, vs...))
-}
-
-// MappedPersonIDNotIn applies the NotIn predicate on the "mapped_person_id" field.
-func MappedPersonIDNotIn(vs ...uuid.UUID) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldNotIn(FieldMappedPersonID, vs...))
-}
-
-// MappedPersonIDGT applies the GT predicate on the "mapped_person_id" field.
-func MappedPersonIDGT(v uuid.UUID) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldGT(FieldMappedPersonID, v))
-}
-
-// MappedPersonIDGTE applies the GTE predicate on the "mapped_person_id" field.
-func MappedPersonIDGTE(v uuid.UUID) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldGTE(FieldMappedPersonID, v))
-}
-
-// MappedPersonIDLT applies the LT predicate on the "mapped_person_id" field.
-func MappedPersonIDLT(v uuid.UUID) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldLT(FieldMappedPersonID, v))
-}
-
-// MappedPersonIDLTE applies the LTE predicate on the "mapped_person_id" field.
-func MappedPersonIDLTE(v uuid.UUID) predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldLTE(FieldMappedPersonID, v))
-}
-
-// MappedPersonIDIsNil applies the IsNil predicate on the "mapped_person_id" field.
-func MappedPersonIDIsNil() predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldIsNull(FieldMappedPersonID))
-}
-
-// MappedPersonIDNotNil applies the NotNil predicate on the "mapped_person_id" field.
-func MappedPersonIDNotNil() predicate.IssueSync {
-	return predicate.IssueSync(sql.FieldNotNull(FieldMappedPersonID))
+// MappedNotNil applies the NotNil predicate on the "mapped" field.
+func MappedNotNil() predicate.IssueSync {
+	return predicate.IssueSync(sql.FieldNotNull(FieldMapped))
 }
 
 // DeadlineEQ applies the EQ predicate on the "deadline" field.

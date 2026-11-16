@@ -209,19 +209,19 @@ func (_c *PersonCreate) SetOrganization(v *Organization) *PersonCreate {
 	return _c.SetOrganizationID(v.ID)
 }
 
-// AddTaskIDs adds the "tasks" edge to the Task entity by IDs.
-func (_c *PersonCreate) AddTaskIDs(ids ...uuid.UUID) *PersonCreate {
-	_c.mutation.AddTaskIDs(ids...)
+// AddAssignedTaskIDs adds the "assigned_tasks" edge to the Task entity by IDs.
+func (_c *PersonCreate) AddAssignedTaskIDs(ids ...uuid.UUID) *PersonCreate {
+	_c.mutation.AddAssignedTaskIDs(ids...)
 	return _c
 }
 
-// AddTasks adds the "tasks" edges to the Task entity.
-func (_c *PersonCreate) AddTasks(v ...*Task) *PersonCreate {
+// AddAssignedTasks adds the "assigned_tasks" edges to the Task entity.
+func (_c *PersonCreate) AddAssignedTasks(v ...*Task) *PersonCreate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _c.AddTaskIDs(ids...)
+	return _c.AddAssignedTaskIDs(ids...)
 }
 
 // AddTeamMembershipIDs adds the "team_memberships" edge to the TeamMembership entity by IDs.
@@ -540,12 +540,12 @@ func (_c *PersonCreate) createSpec() (*Person, *sqlgraph.CreateSpec) {
 		_node.OrganizationID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.TasksIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.AssignedTasksIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   person.TasksTable,
-			Columns: []string{person.TasksColumn},
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   person.AssignedTasksTable,
+			Columns: person.AssignedTasksPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(task.FieldID, field.TypeUUID),

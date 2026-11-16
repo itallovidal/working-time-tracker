@@ -44,8 +44,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// EdgeOrganization holds the string denoting the organization edge name in mutations.
 	EdgeOrganization = "organization"
-	// EdgeTasks holds the string denoting the tasks edge name in mutations.
-	EdgeTasks = "tasks"
+	// EdgeAssignedTasks holds the string denoting the assigned_tasks edge name in mutations.
+	EdgeAssignedTasks = "assigned_tasks"
 	// EdgeTeamMemberships holds the string denoting the team_memberships edge name in mutations.
 	EdgeTeamMemberships = "team_memberships"
 	// EdgeWorkSessions holds the string denoting the work_sessions edge name in mutations.
@@ -73,13 +73,11 @@ const (
 	OrganizationInverseTable = "organizations"
 	// OrganizationColumn is the table column denoting the organization relation/edge.
 	OrganizationColumn = "organization_id"
-	// TasksTable is the table that holds the tasks relation/edge.
-	TasksTable = "tasks"
-	// TasksInverseTable is the table name for the Task entity.
+	// AssignedTasksTable is the table that holds the assigned_tasks relation/edge. The primary key declared below.
+	AssignedTasksTable = "task_assignees"
+	// AssignedTasksInverseTable is the table name for the Task entity.
 	// It exists in this package in order to avoid circular dependency with the "task" package.
-	TasksInverseTable = "tasks"
-	// TasksColumn is the table column denoting the tasks relation/edge.
-	TasksColumn = "assignee_id"
+	AssignedTasksInverseTable = "tasks"
 	// TeamMembershipsTable is the table that holds the team_memberships relation/edge.
 	TeamMembershipsTable = "team_memberships"
 	// TeamMembershipsInverseTable is the table name for the TeamMembership entity.
@@ -162,6 +160,12 @@ var Columns = []string{
 	FieldOnboardedAt,
 	FieldCreatedAt,
 }
+
+var (
+	// AssignedTasksPrimaryKey and AssignedTasksColumn2 are the table columns denoting the
+	// primary key for the assigned_tasks relation (M2M).
+	AssignedTasksPrimaryKey = []string{"task_id", "person_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -288,17 +292,17 @@ func ByOrganizationField(field string, opts ...sql.OrderTermOption) OrderOption 
 	}
 }
 
-// ByTasksCount orders the results by tasks count.
-func ByTasksCount(opts ...sql.OrderTermOption) OrderOption {
+// ByAssignedTasksCount orders the results by assigned_tasks count.
+func ByAssignedTasksCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newTasksStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newAssignedTasksStep(), opts...)
 	}
 }
 
-// ByTasks orders the results by tasks terms.
-func ByTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByAssignedTasks orders the results by assigned_tasks terms.
+func ByAssignedTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newAssignedTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -434,11 +438,11 @@ func newOrganizationStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, OrganizationTable, OrganizationColumn),
 	)
 }
-func newTasksStep() *sqlgraph.Step {
+func newAssignedTasksStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(TasksInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, TasksTable, TasksColumn),
+		sqlgraph.To(AssignedTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, AssignedTasksTable, AssignedTasksPrimaryKey...),
 	)
 }
 func newTeamMembershipsStep() *sqlgraph.Step {

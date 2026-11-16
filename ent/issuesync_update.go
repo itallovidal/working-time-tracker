@@ -172,37 +172,15 @@ func (_u *IssueSyncUpdate) ClearAssigneeLogins() *IssueSyncUpdate {
 	return _u
 }
 
-// SetMappedLogin sets the "mapped_login" field.
-func (_u *IssueSyncUpdate) SetMappedLogin(v string) *IssueSyncUpdate {
-	_u.mutation.SetMappedLogin(v)
+// SetMapped sets the "mapped" field.
+func (_u *IssueSyncUpdate) SetMapped(v map[string]string) *IssueSyncUpdate {
+	_u.mutation.SetMapped(v)
 	return _u
 }
 
-// SetNillableMappedLogin sets the "mapped_login" field if the given value is not nil.
-func (_u *IssueSyncUpdate) SetNillableMappedLogin(v *string) *IssueSyncUpdate {
-	if v != nil {
-		_u.SetMappedLogin(*v)
-	}
-	return _u
-}
-
-// SetMappedPersonID sets the "mapped_person_id" field.
-func (_u *IssueSyncUpdate) SetMappedPersonID(v uuid.UUID) *IssueSyncUpdate {
-	_u.mutation.SetMappedPersonID(v)
-	return _u
-}
-
-// SetNillableMappedPersonID sets the "mapped_person_id" field if the given value is not nil.
-func (_u *IssueSyncUpdate) SetNillableMappedPersonID(v *uuid.UUID) *IssueSyncUpdate {
-	if v != nil {
-		_u.SetMappedPersonID(*v)
-	}
-	return _u
-}
-
-// ClearMappedPersonID clears the value of the "mapped_person_id" field.
-func (_u *IssueSyncUpdate) ClearMappedPersonID() *IssueSyncUpdate {
-	_u.mutation.ClearMappedPersonID()
+// ClearMapped clears the value of the "mapped" field.
+func (_u *IssueSyncUpdate) ClearMapped() *IssueSyncUpdate {
+	_u.mutation.ClearMapped()
 	return _u
 }
 
@@ -384,14 +362,11 @@ func (_u *IssueSyncUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.AssigneeLoginsCleared() {
 		_spec.ClearField(issuesync.FieldAssigneeLogins, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.MappedLogin(); ok {
-		_spec.SetField(issuesync.FieldMappedLogin, field.TypeString, value)
+	if value, ok := _u.mutation.Mapped(); ok {
+		_spec.SetField(issuesync.FieldMapped, field.TypeJSON, value)
 	}
-	if value, ok := _u.mutation.MappedPersonID(); ok {
-		_spec.SetField(issuesync.FieldMappedPersonID, field.TypeUUID, value)
-	}
-	if _u.mutation.MappedPersonIDCleared() {
-		_spec.ClearField(issuesync.FieldMappedPersonID, field.TypeUUID)
+	if _u.mutation.MappedCleared() {
+		_spec.ClearField(issuesync.FieldMapped, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Deadline(); ok {
 		_spec.SetField(issuesync.FieldDeadline, field.TypeTime, value)
@@ -626,37 +601,15 @@ func (_u *IssueSyncUpdateOne) ClearAssigneeLogins() *IssueSyncUpdateOne {
 	return _u
 }
 
-// SetMappedLogin sets the "mapped_login" field.
-func (_u *IssueSyncUpdateOne) SetMappedLogin(v string) *IssueSyncUpdateOne {
-	_u.mutation.SetMappedLogin(v)
+// SetMapped sets the "mapped" field.
+func (_u *IssueSyncUpdateOne) SetMapped(v map[string]string) *IssueSyncUpdateOne {
+	_u.mutation.SetMapped(v)
 	return _u
 }
 
-// SetNillableMappedLogin sets the "mapped_login" field if the given value is not nil.
-func (_u *IssueSyncUpdateOne) SetNillableMappedLogin(v *string) *IssueSyncUpdateOne {
-	if v != nil {
-		_u.SetMappedLogin(*v)
-	}
-	return _u
-}
-
-// SetMappedPersonID sets the "mapped_person_id" field.
-func (_u *IssueSyncUpdateOne) SetMappedPersonID(v uuid.UUID) *IssueSyncUpdateOne {
-	_u.mutation.SetMappedPersonID(v)
-	return _u
-}
-
-// SetNillableMappedPersonID sets the "mapped_person_id" field if the given value is not nil.
-func (_u *IssueSyncUpdateOne) SetNillableMappedPersonID(v *uuid.UUID) *IssueSyncUpdateOne {
-	if v != nil {
-		_u.SetMappedPersonID(*v)
-	}
-	return _u
-}
-
-// ClearMappedPersonID clears the value of the "mapped_person_id" field.
-func (_u *IssueSyncUpdateOne) ClearMappedPersonID() *IssueSyncUpdateOne {
-	_u.mutation.ClearMappedPersonID()
+// ClearMapped clears the value of the "mapped" field.
+func (_u *IssueSyncUpdateOne) ClearMapped() *IssueSyncUpdateOne {
+	_u.mutation.ClearMapped()
 	return _u
 }
 
@@ -868,14 +821,11 @@ func (_u *IssueSyncUpdateOne) sqlSave(ctx context.Context) (_node *IssueSync, er
 	if _u.mutation.AssigneeLoginsCleared() {
 		_spec.ClearField(issuesync.FieldAssigneeLogins, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.MappedLogin(); ok {
-		_spec.SetField(issuesync.FieldMappedLogin, field.TypeString, value)
+	if value, ok := _u.mutation.Mapped(); ok {
+		_spec.SetField(issuesync.FieldMapped, field.TypeJSON, value)
 	}
-	if value, ok := _u.mutation.MappedPersonID(); ok {
-		_spec.SetField(issuesync.FieldMappedPersonID, field.TypeUUID, value)
-	}
-	if _u.mutation.MappedPersonIDCleared() {
-		_spec.ClearField(issuesync.FieldMappedPersonID, field.TypeUUID)
+	if _u.mutation.MappedCleared() {
+		_spec.ClearField(issuesync.FieldMapped, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Deadline(); ok {
 		_spec.SetField(issuesync.FieldDeadline, field.TypeTime, value)

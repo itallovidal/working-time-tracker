@@ -107,24 +107,29 @@ a do [GitHub](github.md#o-que-sincroniza), com estas diferenças:
 | Prazo | O `due_date` não é lido nem escrito: o prazo fica só aqui, como no GitHub |
 | Issue transferida | Continua no projeto antigo, fechada, com `moved_to_id`. Conta como sumida (`gone`), e não como fechada |
 
-### Responsável
+### Responsáveis
 
-Pela **conta** da pessoa e, sem ela, pelo **e-mail público**, como no GitHub (ver
-[contas das pessoas](overview.md#contas-das-pessoas)). Conectar a conta no perfil pede só o escopo `read_user`, e o
-e-mail que fica guardado é o principal, que o `/user` dá ao dono do token. A tarefa importada de uma issue nasce só para
-quem tem conta no GitLab. Há duas diferenças:
+Pela **conta** de cada pessoa e, sem ela, pelo **e-mail público**, pessoa a pessoa, como no GitHub (ver
+[os responsáveis](overview.md#os-responsáveis) e [contas das pessoas](overview.md#contas-das-pessoas)). Conectar a conta
+no perfil pede só o escopo `read_user`, e o e-mail que fica guardado é o principal, que o `/user` dá ao dono do token. A
+tarefa importada de uma issue nasce só para quem tem conta no GitLab. Há três diferenças:
 
-- O GitLab escreve o responsável pelo **id** do usuário (`assignee_ids`). O adapter acha o id pelo username antes de
+- O GitLab escreve os responsáveis pelo **id** do usuário (`assignee_ids`). O adapter acha o id pelo username antes de
   mandar. Um username que o GitLab não tem fica de fora, sem erro.
 - O e-mail público só vem lendo o usuário (`GET /users/:id`). A busca por e-mail (`GET /users?search=`) também casa o
   nome e o username, então cada candidato tem o e-mail público conferido, e só vale se exatamente um o publica.
+- **O GitLab grátis guarda um responsável por issue.** Vão todos os logins da tarefa; quando a issue volta com menos (e
+  os que ficaram estão entre os mandados), a tarefa continua com todos, o vínculo ganha o aviso
+  `issue_sync.single_assignee` e a mesma mudança não é tentada de novo. Publicar uma tarefa com várias pessoas deixa o
+  mesmo aviso. Só os pares cujo login ficou na issue vão para o acordo, então a rodada seguinte não tira os outros da
+  tarefa.
 
 ### Quem escreve e quem apaga
 
 - **Pode escrever** quem tem nível **Planner** (15) ou acima no projeto, contando o que herda dos grupos acima dele
   (`GET /projects/:id/members/all/:user_id`). Guest só lê: as issues vêm para cá, e as mudanças daqui não vão
   (`issue_sync.read_only`). O projeto arquivado também é só leitura.
-- **Guest que publica** uma tarefa abre a issue sem as etiquetas e sem o responsável, que o GitLab descarta.
+- **Guest que publica** uma tarefa abre a issue sem as etiquetas e sem os responsáveis, que o GitLab descarta.
 - **Excluir a tarefa** com a caixa **Apagar a issue no GitLab** marcada apaga a issue só se a conta é **Owner** do
   projeto. Sem isso, ela é fechada, com o aviso `issue_sync.remove_only_closed`.
 - **Projeto com as issues desligadas**: publicar responde `integration.issues_disabled`.
@@ -147,6 +152,7 @@ quem tem conta no GitLab. Há duas diferenças:
 - Os textos têm os mesmos tetos do GitHub (65.536 caracteres na descrição, 50 numa etiqueta). Uma etiqueta com
   vírgula não se espelha bem, porque a API do GitLab recebe a lista separada por vírgulas.
 - O responsável pelo e-mail tem o mesmo limite do GitHub: só funciona para quem publica o e-mail no perfil.
+- No GitLab grátis a issue fica com um responsável só, e a tarefa com todos (ver [responsáveis](#responsáveis)).
 - Com a sincronização ligada, o projeto não troca. Ver [ligar e desligar](overview.md#ligar-e-desligar).
 
 ## Conferir sem o GitLab de verdade

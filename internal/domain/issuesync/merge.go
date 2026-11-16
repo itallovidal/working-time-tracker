@@ -39,7 +39,7 @@ type Local struct {
 	Body   string
 	Closed bool // status "closed"; os outros três contam como aberta
 	Labels []string
-	Person *uuid.UUID // o responsável
+	People []uuid.UUID // os responsáveis
 	// Deadline é o prazo da tarefa; zero (ou antes de 1971) é sem prazo.
 	Deadline time.Time
 }
@@ -50,11 +50,10 @@ type Snapshot struct {
 	Body   string
 	Closed bool
 	Labels []string
-	// Logins são os responsáveis que a issue tinha no acordo; MappedLogin é o que deles corresponde ao
-	// responsável da tarefa (MappedPerson), se algum.
-	Logins       []string
-	MappedLogin  string
-	MappedPerson *uuid.UUID
+	// Logins são os responsáveis que a issue tinha no acordo; Mapped são os que deles são responsáveis da tarefa,
+	// cada um com a pessoa. Os outros logins não se ligam a ninguém do projeto.
+	Logins []string
+	Mapped []Mapping
 	// Deadline é o prazo que os dois lados tinham no acordo; zero é sem prazo.
 	Deadline time.Time
 }
@@ -73,16 +72,17 @@ type LocalChange struct {
 	Body   *string
 	Status *string // "closed", ou "backlog" na issue reaberta
 	Labels *[]string
-	// SetAssignee diz que o responsável passa a ser Person (nulo é sem responsável).
-	SetAssignee bool
-	Person      *uuid.UUID
+	// AddPeople e RemovePeople são quem entra e quem sai dos responsáveis da tarefa.
+	AddPeople    []uuid.UUID
+	RemovePeople []uuid.UUID
 	// Deadline é o prazo novo da tarefa; apontar para o tempo zero a deixa sem prazo.
 	Deadline *time.Time
 }
 
 // Empty diz se não há nada a gravar na tarefa.
 func (c LocalChange) Empty() bool {
-	return c.Title == nil && c.Body == nil && c.Status == nil && c.Labels == nil && !c.SetAssignee && c.Deadline == nil
+	return c.Title == nil && c.Body == nil && c.Status == nil && c.Labels == nil && len(c.AddPeople) == 0 &&
+		len(c.RemovePeople) == 0 && c.Deadline == nil
 }
 
 // Push é o que a issue passa a ter por vir daqui; os campos nulos não vão no PATCH.
@@ -130,17 +130,18 @@ func sortedPtr(list *[]string) *[]string {
 	return &out
 }
 
-// Mapping é a ligação entre o responsável da tarefa e um login, a gravar no snapshot.
+// Mapping é a ligação entre um responsável da tarefa e um login da issue, a gravar no snapshot.
 type Mapping struct {
 	Login  string
-	Person *uuid.UUID
+	Person uuid.UUID
 }
 
 // Plan é o resultado de Merge.
 type Plan struct {
-	Local  LocalChange
-	Push   Push
-	Mapped Mapping
+	Local LocalChange
+	Push  Push
+	// Mapped são os pares login/pessoa do acordo novo.
+	Mapped []Mapping
 	// Problem é o código do que impediu parte do trabalho sem ser um erro (o login que não se acha).
 	Problem string
 }
@@ -330,93 +331,159 @@ func inSet(set map[string]string, k string) bool {
 	return ok
 }
 
-// mergeAssignee liga o responsável único da tarefa aos responsáveis da issue pelo login que o e-mail
-// dele revela. Só mexe no login ligado: os outros responsáveis da issue, que não se ligam a ninguém
-// daqui, ficam como estão nas duas direções, e a mudança deles não desfaz a escolha de quem é o
-// responsável aqui.
+// mergeAssignee liga os responsáveis da tarefa aos da issue, pessoa a pessoa, pelo login de cada uma (Decisão 31).
+// Os logins da issue que não se ligam a ninguém do projeto ficam como estão nas duas direções. Cada par do último
+// acordo (b.Mapped) se compara com os dois lados:
+//   - a issue tirou o login: ela vence, e a pessoa sai da tarefa;
+//   - a tarefa tirou a pessoa: o login sai da issue;
+//   - um login da issue sem par que agora se liga a alguém (a issue o ganhou, ou a pessoa publicou o e-mail depois)
+//     põe a pessoa na tarefa, salvo a que a tarefa acabou de tirar;
+//   - uma pessoa da tarefa sem par põe o login dela na issue; sem login, o aviso no_login fica só para ela.
+//
+// O mesmo elemento mudado dos dois lados fica como a issue o tem.
 func mergeAssignee(ctx context.Context, plan *Plan, b Snapshot, r Remote, l Local, res Resolver) error {
-	plan.Mapped = Mapping{Login: b.MappedLogin, Person: b.MappedPerson}
-	rlogins := keyed(r.Assignee)
-	mapped := key(b.MappedLogin) != ""
-
-	// takeRemote põe na tarefa o primeiro responsável da issue que se liga a alguém do projeto.
-	takeRemote := func() (bool, error) {
-		for _, name := range r.Assignee {
-			p, err := res.PersonFor(ctx, name)
-			if err != nil {
-				return false, err
-			}
-			if p != nil {
-				plan.Mapped = Mapping{Login: name, Person: p}
-				if !samePerson(l.Person, p) {
-					plan.Local.SetAssignee, plan.Local.Person = true, p
-				}
-				return true, nil
-			}
-		}
-		return false, nil
+	rlogins, blogins := keyed(r.Assignee), keyed(b.Logins)
+	local := map[uuid.UUID]bool{}
+	for _, p := range l.People {
+		local[p] = true
+	}
+	basePeople := map[uuid.UUID]bool{}
+	baseLogin := map[string]bool{}
+	for _, m := range b.Mapped {
+		basePeople[m.Person] = true
+		baseLogin[key(m.Login)] = true
 	}
 
-	switch {
-	case mapped && !inSet(rlogins, key(b.MappedLogin)):
-		// O GitHub tirou o login ligado (ou o trocou): ele vence. Fica o primeiro responsável que se liga
-		// a alguém do projeto, se há; senão a tarefa fica sem responsável.
-		found, err := takeRemote()
+	var mapped []Mapping
+	mappedPerson := map[uuid.UUID]bool{}
+	keep := func(m Mapping) {
+		mapped = append(mapped, m)
+		mappedPerson[m.Person] = true
+	}
+	removeLocal := map[uuid.UUID]bool{}
+	dropLogin := map[string]bool{}
+
+	// Os pares do último acordo.
+	for _, m := range b.Mapped {
+		k := key(m.Login)
+		_, onIssue := rlogins[k]
+		switch {
+		case !onIssue:
+			if local[m.Person] {
+				removeLocal[m.Person] = true
+			}
+		case !local[m.Person]:
+			dropLogin[k] = true
+		default:
+			keep(Mapping{Login: rlogins[k], Person: m.Person})
+		}
+	}
+
+	// Os logins da issue sem par.
+	for _, name := range r.Assignee {
+		k := key(name)
+		if k == "" || baseLogin[k] {
+			continue
+		}
+		p, err := res.PersonFor(ctx, name)
 		if err != nil {
 			return err
 		}
-		if !found {
-			plan.Mapped = Mapping{}
-			if l.Person != nil {
-				plan.Local.SetAssignee, plan.Local.Person = true, nil
-			}
+		if p == nil || mappedPerson[*p] {
+			continue
 		}
-		return nil
-
-	case !mapped && len(r.Assignee) > 0 && (!sameKeys(rlogins, keyed(b.Logins)) || samePerson(l.Person, b.MappedPerson)):
-		// Nada está ligado e a issue tem responsável: se algum se liga a alguém do projeto, a tarefa o
-		// ganha. Vale quando o GitHub mudou os responsáveis e também a cada rodada em que a tarefa não tem
-		// escolha própria esperando: quem publicou o e-mail no perfil depois passa a ser reconhecido sem
-		// que ninguém mexa na issue. Se nenhum se liga, nada muda, e a escolha da tarefa segue abaixo.
-		found, err := takeRemote()
-		if err != nil || found {
-			return err
+		// A pessoa que a tarefa tirou desde o acordo, com outro login, não volta por este.
+		if _, wasOnIssue := blogins[k]; wasOnIssue && basePeople[*p] && !local[*p] {
+			continue
+		}
+		keep(Mapping{Login: strings.TrimSpace(name), Person: *p})
+		switch {
+		case removeLocal[*p]:
+			delete(removeLocal, *p) // a issue trocou o login da pessoa: ela fica
+		case !local[*p]:
+			plan.Local.AddPeople = append(plan.Local.AddPeople, *p)
+		}
+	}
+	for _, p := range l.People {
+		if removeLocal[p] {
+			plan.Local.RemovePeople = append(plan.Local.RemovePeople, p)
 		}
 	}
 
-	if samePerson(l.Person, b.MappedPerson) {
-		return nil
-	}
-	// Só a tarefa mudou de responsável: a issue perde o login que estava ligado e ganha o da pessoa nova.
-	remaining := withoutLogin(r.Assignee, b.MappedLogin)
-	login := ""
-	if l.Person != nil {
-		var err error
-		if login, err = res.LoginFor(ctx, *l.Person); err != nil {
+	// As pessoas da tarefa sem par: o login delas vai para a issue.
+	var addLogins []string
+	for _, p := range l.People {
+		if mappedPerson[p] || removeLocal[p] {
+			continue
+		}
+		login, err := res.LoginFor(ctx, p)
+		if err != nil {
 			return err
 		}
-		if login == "" {
-			// Sem o login não há o que mandar; o snapshot fica como está e a próxima rodada tenta de novo.
+		k := key(login)
+		if k == "" {
+			// Sem o login não há o que mandar; ela fica sem par, e a próxima rodada tenta de novo.
 			plan.Problem = ErrNoLogin.Code
-			return nil
+			continue
 		}
-		if !inSet(keyed(remaining), key(login)) {
-			remaining = append(remaining, login)
+		delete(dropLogin, k)
+		if name, onIssue := rlogins[k]; onIssue {
+			keep(Mapping{Login: name, Person: p})
+			continue
+		}
+		keep(Mapping{Login: strings.TrimSpace(login), Person: p})
+		addLogins = append(addLogins, strings.TrimSpace(login))
+	}
+	plan.Mapped = mapped
+
+	remaining := make([]string, 0, len(r.Assignee)+len(addLogins))
+	for _, name := range r.Assignee {
+		if k := key(name); k != "" && !dropLogin[k] {
+			remaining = append(remaining, name)
 		}
 	}
-	plan.Mapped = Mapping{Login: login, Person: l.Person}
+	remaining = append(remaining, addLogins...)
 	if !sameKeys(keyed(remaining), rlogins) {
 		plan.Push.Assignees = &remaining
 	}
 	return nil
 }
 
-func withoutLogin(logins []string, drop string) []string {
-	out := make([]string, 0, len(logins)+1)
-	for _, l := range logins {
-		if key(l) != key(drop) || key(drop) == "" {
-			out = append(out, l)
-		}
+// mappedPeople são as pessoas dos pares, para comparar com os responsáveis da tarefa.
+func mappedPeople(m []Mapping) map[uuid.UUID]bool {
+	out := make(map[uuid.UUID]bool, len(m))
+	for _, x := range m {
+		out[x.Person] = true
 	}
 	return out
+}
+
+// samePeople diz se os responsáveis da tarefa são exatamente as pessoas dos pares.
+func samePeople(people []uuid.UUID, m []Mapping) bool {
+	set := mappedPeople(m)
+	seen := map[uuid.UUID]bool{}
+	for _, p := range people {
+		if !set[p] {
+			return false
+		}
+		seen[p] = true
+	}
+	return len(seen) == len(set)
+}
+
+// sameMapping diz se dois acordos ligam os mesmos logins às mesmas pessoas.
+func sameMapping(a, b []Mapping) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	byLogin := make(map[string]uuid.UUID, len(a))
+	for _, m := range a {
+		byLogin[key(m.Login)] = m.Person
+	}
+	for _, m := range b {
+		if p, ok := byLogin[key(m.Login)]; !ok || p != m.Person {
+			return false
+		}
+	}
+	return true
 }

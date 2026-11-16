@@ -9,12 +9,19 @@ import (
 // Erros do domínio. O código é o que a API devolve; o texto em cada idioma está
 // em internal/i18n/locales, na chave errors.<código>.
 var (
-	ErrNotFound                = apperr.New("task.not_found", http.StatusNotFound)
-	ErrNameRequired            = apperr.New("task.name_required", http.StatusBadRequest)
-	ErrDescriptionTooLong      = apperr.New("task.description_too_long", http.StatusBadRequest, "max")
-	ErrAssigneeNotInTeam       = apperr.New("task.assignee_not_in_team", http.StatusBadRequest)
-	ErrInvalidAssignee         = apperr.New("task.invalid_assignee", http.StatusBadRequest)
-	ErrAlreadyAssigned         = apperr.New("task.already_assigned", http.StatusConflict)
+	ErrNotFound           = apperr.New("task.not_found", http.StatusNotFound)
+	ErrNameRequired       = apperr.New("task.name_required", http.StatusBadRequest)
+	ErrDescriptionTooLong = apperr.New("task.description_too_long", http.StatusBadRequest, "max")
+	ErrAssigneeNotInTeam  = apperr.New("task.assignee_not_in_team", http.StatusBadRequest)
+	ErrInvalidAssignee    = apperr.New("task.invalid_assignee", http.StatusBadRequest)
+	ErrAlreadyAssigned    = apperr.New("task.already_assigned", http.StatusConflict)
+	// ErrShareForbidden é pôr outra pessoa na tarefa sem poder: numa tarefa livre, só o admin do projeto escolhe quem;
+	// numa com gente, só quem já é responsável (ou o admin) a divide.
+	ErrShareForbidden = apperr.New("task.share_forbidden", http.StatusForbidden)
+	// ErrRemoveForbidden é tirar outra pessoa da tarefa sem ser admin do projeto: o responsável só sai ele mesmo.
+	ErrRemoveForbidden = apperr.New("task.remove_forbidden", http.StatusForbidden)
+	// ErrTooManyAssignees é passar de MaxAssignees responsáveis.
+	ErrTooManyAssignees        = apperr.New("task.too_many_assignees", http.StatusBadRequest, "max")
 	ErrIntegrationNotFound     = apperr.New("task.integration_not_found", http.StatusBadRequest)
 	ErrIntegrationOtherProject = apperr.New("task.integration_other_project", http.StatusBadRequest)
 	ErrNoExternalItem          = apperr.New("task.no_external_item", http.StatusBadRequest)

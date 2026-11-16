@@ -873,7 +873,7 @@ help:
     tasks:
       title: Create the tasks
       text: "Give the task a name and, if you want, a description, deadline, priority, labels and assignee. The task starts in Backlog; with no deadline, the app uses 7 days from today."
-      tip: "A task without an assignee is available to the team: whoever clocks in on it becomes the assignee. The assignee must be on the project."
+      tip: "A task without an assignee is available to the team: whoever clocks in on it becomes the assignee. A task can have several assignees, all on the project: someone on it adds other people, and whoever manages the project picks anyone. Only assignees clock in on it."
       tip_solo: "A new task is already yours. An unassigned one (from GitHub, GitLab or Trello, for instance) becomes yours when you clock in on it."
     track:
       title: Track the hours
@@ -948,7 +948,7 @@ help:
       filters: "The search and the filters (deadline, priority, status and labels) stay in the URL: you can save or send the link to the filtered list."
       new: "“New task” opens a form in steps: the task, the details and, if the project has integrations, the platforms where it should also exist."
       open: "Click a row to open the task."
-      presence: "For the owner and the administrators, a dot next to the assignee shows whether they have the clock running right now: green, yes; grey, no. Hover it to see which task."
+      presence: "For the owner and the administrators, a dot next to the assignees shows whether any of them has the clock running right now: green, yes; grey, no. Hover it to see who and on which task."
     project_people:
       title: "Project: Collaborators"
       text: "Who works on the project and in which teams, in two views: People and Teams. This is read-only; to change anything, use Management."
@@ -1353,7 +1353,14 @@ tasks:
   due_date: Deadline up to the date
   unassigned: Unassigned
   assign_me: Assign to me
-  assign_other: Someone else
+  assign_people: Choose people
+  assignees:
+    label: Assignees
+    search: Search for a person
+    you: you
+    hint_free: "You can take the task for yourself; choosing someone else is up to whoever manages the project."
+    hint_mine: "You add other people and can leave; removing someone is up to whoever manages the project."
+    hint_other: "Only someone on the task, or who manages the project, changes the assignees."
   col_priority: Priority
   priority_filter: Filter by priority
   priority:
@@ -1385,7 +1392,6 @@ tasks:
     next: Next
     back: Back
     name_required: Enter the task name.
-    pick_person: Choose the assignee.
   md:
     label: Description mode
     write: Write
@@ -1398,7 +1404,6 @@ tasks:
   no_labels_member: The project has no labels yet. Ask an admin to create them.
   label_new: New label
   label_create: Create
-  pick_person: Pick the person
   unassigned_hint: "Without an assignee the task is available: whoever clocks in on it becomes the assignee."
   unassigned_hint_solo: "Without an assignee, the task becomes yours when you clock in on it."
   new: New task
@@ -1507,6 +1512,10 @@ task_detail:
   claim: Take task
   claim_title: Assign the task to me, without starting the clock
   claimed: You took the task. It is in My tasks.
+  add_people: Add people
+  leave: Leave the task
+  left: You left the task.
+  leave_running: "Your clock is running on this task. Leaving stops your time on it now. Leave anyway?"
   back: Back to the list
   breadcrumb: You are here
   no_description: This task has no description.
@@ -1733,7 +1742,7 @@ integration_types:
     pick_loading: Loading repositories…
     pick_hint: The list shows the repositories your account can see. If a repository of an organization does not show up, the organization owner must approve the app in the organization settings, under third-party application access.
     sync_label: "Sync the issues of this repository with the tasks"
-    sync_hint: "Open issues become tasks, and the name, description, labels, assignee and closing stay the same on both sides, whichever one changes. The assignee is linked by the user's public email on GitHub. If both sides change the same field, GitHub wins. Priority, deadline, hours and the In progress and Awaiting closure statuses stay here only."
+    sync_hint: "Open issues become tasks, and the name, description, labels, assignees and closing stay the same on both sides, whichever one changes. Each assignee is linked by the account the person connected or by their public email on GitHub. If both sides change the same field, GitHub wins. Priority, deadline, hours and the In progress and Awaiting closure statuses stay here only."
     connect_unconfigured: The GitHub connection is not set up on this server. Whoever runs it must define GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET and PUBLIC_URL.
     fields:
       repo:
@@ -1749,7 +1758,7 @@ integration_types:
     pick_loading: Loading projects…
     pick_hint: The list shows the projects your account is a member of. A project that does not show up can be typed as group/project.
     sync_label: "Sync the issues of this project with the tasks"
-    sync_hint: "Open issues become tasks, and the name, description, labels, assignee and closing stay the same on both sides, whichever one changes. The assignee is linked by the user's public email on GitLab. If both sides change the same field, GitLab wins. Priority, deadline, hours and the In progress and Awaiting closure statuses stay here only."
+    sync_hint: "Open issues become tasks, and the name, description, labels, assignees and closing stay the same on both sides, whichever one changes. Each assignee is linked by the account the person connected or by their public email on GitLab; free GitLab keeps a single assignee per issue. If both sides change the same field, GitLab wins. Priority, deadline, hours and the In progress and Awaiting closure statuses stay here only."
     connect_unconfigured: The GitLab connection is not set up on this server. Whoever runs it must define GITLAB_CLIENT_ID, GITLAB_CLIENT_SECRET and PUBLIC_URL.
     fields:
       project_url:
@@ -2172,6 +2181,7 @@ errors:
     link_not_in_project: "Pick someone who is in the project."
     no_login: "could not find, on the platform, the user of the person assigned here: they need to connect their account on their profile (Connected accounts)"
     push_discarded: "the platform ignored a change to this item (the token may lack write permission): it stays here only"
+    single_assignee: "the issue kept only one assignee (free GitLab allows one per issue): the task here keeps them all"
     push_rejected: "the platform refused a change to this item: it stays here only"
     read_only: "the token cannot write to this repository or board: items only come here, and changes made here do not go out"
     publish_read_only: "the token of this integration cannot write to the repository or board: the new item would come out without some of its data, so the task was not posted"
@@ -2183,7 +2193,7 @@ errors:
     name_too_long: "the label name accepts up to {{.max}} characters"
     not_found: "label not found"
   mcp:
-    invalid_assignee: "the assignee is me (you) or none (nobody)"
+    invalid_assignee: "each person is me (you) or their id (list_people)"
     invalid_date: "invalid date in {{.field}}: use YYYY-MM-DD"
     task_already_active: "this task is already running in the session"
     task_not_in_session: "this task is not running in the open session"
@@ -2292,7 +2302,10 @@ errors:
     integration_other_project: "the integration belongs to another project"
     integrations_unavailable: "integrations unavailable"
     invalid_assignee: "invalid assignee"
-    already_assigned: "this task already has an assignee"
+    already_assigned: "this task already has an assignee: ask someone on it to add you"
+    share_forbidden: "only an assignee of the task, or a project admin, can add someone else to it"
+    remove_forbidden: "only a project admin can remove someone else from the task; you can leave it"
+    too_many_assignees: "a task has at most {{.max}} assignees"
     already_linked: "the task is already linked to an item of this integration"
     invalid_assignee_filter: "invalid assignee (assignee_id)"
     invalid_deadline_filter: "invalid deadline (deadline_to): use date and time, like 2026-10-12T23:59:59Z"
@@ -2327,6 +2340,7 @@ errors:
     no_rate: "this person has no hourly rate on this project yet; an admin must set one on the Collaborators tab before clocking in"
     not_found: "session not found"
     not_open: "this person has no open clock-in on this project"
+    not_assignee: "you can only clock in on tasks you are assigned to; ask someone on this one to add you"
     not_yours: "only the person who clocked in, or an admin, can change the tasks of this session"
     other_person_admin_only: "only admins can clock in for another person"
     person_not_found: "person not found"
@@ -2406,6 +2420,7 @@ fields:
   status: "the status"
   required_accounts: "the assignee requirement"
   assignee_id: "the assignee"
+  assignee_ids: "the assignees"
   assignee: "the assignee"
   days: "the validity"
   query: "the search"

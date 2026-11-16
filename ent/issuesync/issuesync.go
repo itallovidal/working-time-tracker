@@ -34,10 +34,8 @@ const (
 	FieldLabels = "labels"
 	// FieldAssigneeLogins holds the string denoting the assignee_logins field in the database.
 	FieldAssigneeLogins = "assignee_logins"
-	// FieldMappedLogin holds the string denoting the mapped_login field in the database.
-	FieldMappedLogin = "mapped_login"
-	// FieldMappedPersonID holds the string denoting the mapped_person_id field in the database.
-	FieldMappedPersonID = "mapped_person_id"
+	// FieldMapped holds the string denoting the mapped field in the database.
+	FieldMapped = "mapped"
 	// FieldDeadline holds the string denoting the deadline field in the database.
 	FieldDeadline = "deadline"
 	// FieldStuckSig holds the string denoting the stuck_sig field in the database.
@@ -82,8 +80,7 @@ var Columns = []string{
 	FieldBody,
 	FieldLabels,
 	FieldAssigneeLogins,
-	FieldMappedLogin,
-	FieldMappedPersonID,
+	FieldMapped,
 	FieldDeadline,
 	FieldStuckSig,
 	FieldLastError,
@@ -108,8 +105,6 @@ var (
 	DefaultTitle string
 	// DefaultBody holds the default value on creation for the "body" field.
 	DefaultBody string
-	// DefaultMappedLogin holds the default value on creation for the "mapped_login" field.
-	DefaultMappedLogin string
 	// DefaultStuckSig holds the default value on creation for the "stuck_sig" field.
 	DefaultStuckSig string
 	// DefaultLastError holds the default value on creation for the "last_error" field.
@@ -191,16 +186,6 @@ func ByTitle(opts ...sql.OrderTermOption) OrderOption {
 // ByBody orders the results by the body field.
 func ByBody(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBody, opts...).ToFunc()
-}
-
-// ByMappedLogin orders the results by the mapped_login field.
-func ByMappedLogin(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldMappedLogin, opts...).ToFunc()
-}
-
-// ByMappedPersonID orders the results by the mapped_person_id field.
-func ByMappedPersonID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldMappedPersonID, opts...).ToFunc()
 }
 
 // ByDeadline orders the results by the deadline field.

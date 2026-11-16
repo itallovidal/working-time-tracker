@@ -76,9 +76,12 @@ type Attrs struct {
 	Priority *string
 	Status   *string
 	LabelIDs *[]string
-	// RequiredAccounts são as plataformas em que o responsável precisa ter conta ("github", "gitlab"). Nil mantém as
-	// que a tarefa tem; vazio tira a trava.
+	// RequiredAccounts são as plataformas em que cada responsável precisa ter conta ("github", "gitlab"). Nil mantém
+	// as que a tarefa tem; vazio tira a trava.
 	RequiredAccounts *[]string
+	// Assignees é a lista inteira de responsáveis que a tarefa passa a ter (ids). Nil mantém a que ela tem; vazio a
+	// deixa livre. Vale no lugar do assigneeID dos métodos que o recebem.
+	Assignees *[]string
 	// SkipPublish são as integrações em que a tarefa nova NÃO deve ser postada sozinha: a pessoa as
 	// desmarcou na etapa Integrações. Só vale na criação (não é guardado) e vai ao gancho de criação.
 	SkipPublish []uuid.UUID
@@ -98,22 +101,59 @@ type Link struct {
 }
 
 type Task struct {
-	ID          uuid.UUID  `json:"id"`
-	ProjectID   uuid.UUID  `json:"project_id"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Priority    string     `json:"priority"`
-	Status      string     `json:"status"`
-	Labels      []Label    `json:"labels"`
-	AssigneeID  *uuid.UUID `json:"assignee_id"`
-	Assignee    *Person    `json:"assignee,omitempty"`
-	Deadline    time.Time  `json:"deadline"`
-	// RequiredAccounts são as plataformas em que o responsável precisa ter conta ligada (a trava "só quem tem conta
+	ID          uuid.UUID `json:"id"`
+	ProjectID   uuid.UUID `json:"project_id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Priority    string    `json:"priority"`
+	Status      string    `json:"status"`
+	Labels      []Label   `json:"labels"`
+	// Assignees são os responsáveis, por nome. Vazio é a tarefa livre: quem bater o ponto nela passa a ser o
+	// responsável. Sempre uma lista.
+	Assignees []Person  `json:"assignees"`
+	Deadline  time.Time `json:"deadline"`
+	// RequiredAccounts são as plataformas em que cada responsável precisa ter conta ligada (a trava "só quem tem conta
 	// no GitHub"); vazio, qualquer pessoa do projeto. Sempre uma lista.
 	RequiredAccounts []string `json:"required_accounts"`
 	// Links são os itens externos a que a tarefa está ligada, do mais antigo para o mais novo.
 	Links     []Link    `json:"links"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// MaxAssignees é quantos responsáveis uma tarefa tem no máximo: o mesmo teto do GitHub numa issue.
+const MaxAssignees = validate.MaxTaskAssignees
+
+// Free diz se a tarefa está livre, sem responsável nenhum.
+func (t *Task) Free() bool { return len(t.Assignees) == 0 }
+
+// HasAssignee diz se a pessoa é uma das responsáveis pela tarefa.
+func (t *Task) HasAssignee(personID uuid.UUID) bool {
+	for _, p := range t.Assignees {
+		if p.ID == personID {
+			return true
+		}
+	}
+	return false
+}
+
+// AssigneeIDs são os ids dos responsáveis, na ordem da lista.
+func (t *Task) AssigneeIDs() []uuid.UUID {
+	ids := make([]uuid.UUID, len(t.Assignees))
+	for i, p := range t.Assignees {
+		ids[i] = p.ID
+	}
+	return ids
+}
+
+// Actor é quem muda a lista de responsáveis de uma tarefa (Decisão 31). Numa tarefa livre, só o admin do projeto põe
+// outra pessoa: os outros só a pegam para si. Numa tarefa com gente, um responsável acrescenta outras pessoas e pode
+// sair, e só o admin tira alguém. O zero é o sistema (o seed, os testes, a importação): passa sem essas regras, mas
+// quem entra ainda precisa estar no projeto e ter as contas da trava.
+type Actor struct {
+	// ID é a pessoa que pede; vazio é o sistema.
+	ID string
+	// Manage diz se ela administra o projeto (collaborators.manage): o administrador de projeto, o admin, o dono.
+	Manage bool
 }
 
 // HasDeadline diz se a tarefa tem prazo: uma sem prazo guarda o tempo zero do Go, ou nada.
@@ -141,10 +181,10 @@ func (t *Task) LinkFor(integrationID string) *Link {
 // ListFilter restringe a lista de tarefas de um projeto. O valor zero lista tudo.
 type ListFilter struct {
 	Query      string      // trecho do nome, sem diferenciar maiúsculas
-	AssigneeID *uuid.UUID  // só as tarefas desta pessoa
+	AssigneeID *uuid.UUID  // só as tarefas de que esta pessoa é uma das responsáveis
 	Unassigned bool        // só as tarefas sem responsável; vale no lugar de AssigneeID
 	Assigned   bool        // só as tarefas que têm responsável, de qualquer pessoa; vale no lugar de AssigneeID e perde para Unassigned
-	OthersOf   *uuid.UUID  // só as tarefas que têm responsável e não é esta pessoa; vale no lugar de AssigneeID e perde para Unassigned e Assigned
+	OthersOf   *uuid.UUID  // só as tarefas que têm responsável sem esta pessoa entre eles; vale no lugar de AssigneeID e perde para Unassigned e Assigned
 	DeadlineTo *time.Time  // só as com prazo até este instante, inclusive
 	Priorities []string    // só as com uma destas prioridades
 	Statuses   []string    // só as com um destes status

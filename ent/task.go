@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"working-time-tracker/ent/person"
 	"working-time-tracker/ent/project"
 	"working-time-tracker/ent/task"
 
@@ -31,8 +30,6 @@ type Task struct {
 	Priority task.Priority `json:"priority,omitempty"`
 	// Status holds the value of the "status" field.
 	Status task.Status `json:"status,omitempty"`
-	// AssigneeID holds the value of the "assignee_id" field.
-	AssigneeID *uuid.UUID `json:"assignee_id,omitempty"`
 	// Deadline holds the value of the "deadline" field.
 	Deadline time.Time `json:"deadline,omitempty"`
 	// RequiredAccounts holds the value of the "required_accounts" field.
@@ -49,8 +46,8 @@ type Task struct {
 type TaskEdges struct {
 	// Project holds the value of the project edge.
 	Project *Project `json:"project,omitempty"`
-	// Assignee holds the value of the assignee edge.
-	Assignee *Person `json:"assignee,omitempty"`
+	// Assignees holds the value of the assignees edge.
+	Assignees []*Person `json:"assignees,omitempty"`
 	// SessionLinks holds the value of the session_links edge.
 	SessionLinks []*WorkSessionTask `json:"session_links,omitempty"`
 	// Labels holds the value of the labels edge.
@@ -73,15 +70,13 @@ func (e TaskEdges) ProjectOrErr() (*Project, error) {
 	return nil, &NotLoadedError{edge: "project"}
 }
 
-// AssigneeOrErr returns the Assignee value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e TaskEdges) AssigneeOrErr() (*Person, error) {
-	if e.Assignee != nil {
-		return e.Assignee, nil
-	} else if e.loadedTypes[1] {
-		return nil, &NotFoundError{label: person.Label}
+// AssigneesOrErr returns the Assignees value or an error if the edge
+// was not loaded in eager-loading.
+func (e TaskEdges) AssigneesOrErr() ([]*Person, error) {
+	if e.loadedTypes[1] {
+		return e.Assignees, nil
 	}
-	return nil, &NotLoadedError{edge: "assignee"}
+	return nil, &NotLoadedError{edge: "assignees"}
 }
 
 // SessionLinksOrErr returns the SessionLinks value or an error if the edge
@@ -116,8 +111,6 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case task.FieldAssigneeID:
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case task.FieldRequiredAccounts:
 			values[i] = new([]byte)
 		case task.FieldName, task.FieldDescription, task.FieldPriority, task.FieldStatus:
@@ -177,13 +170,6 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Status = task.Status(value.String)
 			}
-		case task.FieldAssigneeID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field assignee_id", values[i])
-			} else if value.Valid {
-				_m.AssigneeID = new(uuid.UUID)
-				*_m.AssigneeID = *value.S.(*uuid.UUID)
-			}
 		case task.FieldDeadline:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field deadline", values[i])
@@ -222,9 +208,9 @@ func (_m *Task) QueryProject() *ProjectQuery {
 	return NewTaskClient(_m.config).QueryProject(_m)
 }
 
-// QueryAssignee queries the "assignee" edge of the Task entity.
-func (_m *Task) QueryAssignee() *PersonQuery {
-	return NewTaskClient(_m.config).QueryAssignee(_m)
+// QueryAssignees queries the "assignees" edge of the Task entity.
+func (_m *Task) QueryAssignees() *PersonQuery {
+	return NewTaskClient(_m.config).QueryAssignees(_m)
 }
 
 // QuerySessionLinks queries the "session_links" edge of the Task entity.
@@ -279,11 +265,6 @@ func (_m *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))
-	builder.WriteString(", ")
-	if v := _m.AssigneeID; v != nil {
-		builder.WriteString("assignee_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
 	builder.WriteString(", ")
 	builder.WriteString("deadline=")
 	builder.WriteString(_m.Deadline.Format(time.ANSIC))

@@ -304,6 +304,8 @@ func (r *run) note(code string) {
 			return 0
 		case ErrNoLogin.Code:
 			return 1
+		case ErrSingleAssignee.Code:
+			return 2
 		case ErrLabelRefused.Code:
 			return 2
 		case ErrPushRejected.Code:
@@ -562,7 +564,7 @@ func (r *run) dirty(row *Row) bool {
 	}
 	l, b := toLocal(t), row.snapshot()
 	return normTitle(l.Title) != normTitle(b.Title) || norm(l.Body) != norm(b.Body) || l.Closed != b.Closed ||
-		!sameKeys(keyed(l.Labels), keyed(b.Labels)) || (r.caps.Assignee && !samePerson(l.Person, b.MappedPerson)) ||
+		!sameKeys(keyed(l.Labels), keyed(b.Labels)) || (r.caps.Assignee && !samePeople(l.People, b.Mapped)) ||
 		(r.caps.Deadline && !normDeadline(l.Deadline).Equal(normDeadline(b.Deadline)))
 }
 

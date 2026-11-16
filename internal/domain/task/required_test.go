@@ -84,7 +84,7 @@ func wantRequired(t *testing.T, err error, what string) {
 // Só quem tem a conta pega a tarefa com a trava.
 func TestRequired_Claim(t *testing.T) {
 	e := newReqEnv(t)
-	tk, err := e.svc.CreateAs("", e.project, "Dev", "", "", nil, task.Attrs{RequiredAccounts: github()})
+	tk, err := e.svc.CreateAs(task.Actor{}, e.project, "Dev", "", "", nil, task.Attrs{RequiredAccounts: github()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestRequired_Claim(t *testing.T) {
 	}
 	_, err = e.svc.Claim(e.bia.ID.String(), tk.ID.String())
 	wantRequired(t, err, "bia claiming")
-	if got, err := e.svc.Claim(e.ana.ID.String(), tk.ID.String()); err != nil || got.AssigneeID == nil || *got.AssigneeID != e.ana.ID {
+	if got, err := e.svc.Claim(e.ana.ID.String(), tk.ID.String()); err != nil || !got.HasAssignee(e.ana.ID) {
 		t.Errorf("ana claiming = %v, %v", got, err)
 	}
 }
@@ -101,32 +101,32 @@ func TestRequired_Claim(t *testing.T) {
 // Escolher o responsável na criação e na edição passa pela trava; quem já é o responsável fica.
 func TestRequired_AssigneeOnCreateAndEdit(t *testing.T) {
 	e := newReqEnv(t)
-	_, err := e.svc.CreateAs("", e.project, "Dev", "", e.bia.ID.String(), nil, task.Attrs{RequiredAccounts: github()})
+	_, err := e.svc.CreateAs(task.Actor{}, e.project, "Dev", "", e.bia.ID.String(), nil, task.Attrs{RequiredAccounts: github()})
 	wantRequired(t, err, "create with bia")
 
-	tk, err := e.svc.CreateAs("", e.project, "Livre", "", e.bia.ID.String(), nil, task.Attrs{})
+	tk, err := e.svc.CreateAs(task.Actor{}, e.project, "Livre", "", e.bia.ID.String(), nil, task.Attrs{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Ligar a trava numa tarefa da Bia não a tira dela.
-	if tk, err = e.svc.PatchAttrsAs("", tk.ID.String(), task.Attrs{RequiredAccounts: github()}, nil, validate.Optional[time.Time]{}); err != nil {
+	if tk, err = e.svc.PatchAttrsAs(task.Actor{}, tk.ID.String(), task.Attrs{RequiredAccounts: github()}, nil, validate.Optional[time.Time]{}); err != nil {
 		t.Fatalf("turning the requirement on: %v", err)
 	}
-	if tk.AssigneeID == nil || *tk.AssigneeID != e.bia.ID {
-		t.Errorf("assignee = %v, want Bia kept", tk.AssigneeID)
+	if !tk.HasAssignee(e.bia.ID) {
+		t.Errorf("assignee = %v, want Bia kept", tk.AssigneeIDs())
 	}
 	ana, bia := e.ana.ID.String(), e.bia.ID.String()
-	if _, err := e.svc.PatchAttrsAs("", tk.ID.String(), task.Attrs{}, &ana, validate.Optional[time.Time]{}); err != nil {
+	if _, err := e.svc.PatchAttrsAs(task.Actor{}, tk.ID.String(), task.Attrs{}, &ana, validate.Optional[time.Time]{}); err != nil {
 		t.Fatalf("ana as assignee: %v", err)
 	}
-	_, err = e.svc.UpdateAs("", tk.ID.String(), "Livre", "", &bia, nil, task.Attrs{})
+	_, err = e.svc.UpdateAs(task.Actor{}, tk.ID.String(), "Livre", "", &bia, nil, task.Attrs{})
 	wantRequired(t, err, "back to bia")
 	var ae *apperr.Error
 	if errors.As(err, &ae); ae.Params["field"] != "assignee_id" {
 		t.Errorf("field = %v, want assignee_id", ae.Params["field"])
 	}
 	// Tirar a trava e escolher a Bia no mesmo pedido vale.
-	if _, err := e.svc.UpdateAs("", tk.ID.String(), "Livre", "", &bia, nil, task.Attrs{RequiredAccounts: &[]string{}}); err != nil {
+	if _, err := e.svc.UpdateAs(task.Actor{}, tk.ID.String(), "Livre", "", &bia, nil, task.Attrs{RequiredAccounts: &[]string{}}); err != nil {
 		t.Errorf("requirement off and bia: %v", err)
 	}
 }
@@ -134,14 +134,14 @@ func TestRequired_AssigneeOnCreateAndEdit(t *testing.T) {
 // A trava só aceita as plataformas com conta, e as guarda sem repetir.
 func TestRequired_Validation(t *testing.T) {
 	e := newReqEnv(t)
-	if _, err := e.svc.CreateAs("", e.project, "X", "", "", nil, task.Attrs{RequiredAccounts: &[]string{"trello"}}); !errors.Is(err, task.ErrInvalidRequiredAccount) {
+	if _, err := e.svc.CreateAs(task.Actor{}, e.project, "X", "", "", nil, task.Attrs{RequiredAccounts: &[]string{"trello"}}); !errors.Is(err, task.ErrInvalidRequiredAccount) {
 		t.Errorf("trello = %v, want ErrInvalidRequiredAccount", err)
 	}
-	tk, err := e.svc.CreateAs("", e.project, "X", "", "", nil, task.Attrs{RequiredAccounts: &[]string{"gitlab", "github", "gitlab"}})
+	tk, err := e.svc.CreateAs(task.Actor{}, e.project, "X", "", "", nil, task.Attrs{RequiredAccounts: &[]string{"gitlab", "github", "gitlab"}})
 	if err != nil || len(tk.RequiredAccounts) != 2 || tk.RequiredAccounts[0] != "github" || tk.RequiredAccounts[1] != "gitlab" {
 		t.Errorf("required = %v, %v, want [github gitlab]", tk.RequiredAccounts, err)
 	}
-	free, err := e.svc.CreateAs("", e.project, "Y", "", "", nil, task.Attrs{})
+	free, err := e.svc.CreateAs(task.Actor{}, e.project, "Y", "", "", nil, task.Attrs{})
 	if err != nil || free.RequiredAccounts == nil || len(free.RequiredAccounts) != 0 {
 		t.Errorf("without a requirement = %#v, want []", free.RequiredAccounts)
 	}
@@ -166,12 +166,12 @@ func TestRequired_StoreCheck(t *testing.T) {
 // No modo solo a trava não vale: a pessoa é uma só, e uma tarefa que ficou com ela não a trava.
 func TestRequired_SoloSkipsTheCheck(t *testing.T) {
 	e := newReqEnv(t)
-	tk, err := e.svc.CreateAs("", e.project, "Dev", "", "", nil, task.Attrs{RequiredAccounts: github()})
+	tk, err := e.svc.CreateAs(task.Actor{}, e.project, "Dev", "", "", nil, task.Attrs{RequiredAccounts: github()})
 	if err != nil {
 		t.Fatal(err)
 	}
 	testClient.Organization.UpdateOneID(e.org).SetSolo(true).ExecX(context.Background())
-	if got, err := e.svc.Claim(e.bia.ID.String(), tk.ID.String()); err != nil || got.AssigneeID == nil || *got.AssigneeID != e.bia.ID {
+	if got, err := e.svc.Claim(e.bia.ID.String(), tk.ID.String()); err != nil || !got.HasAssignee(e.bia.ID) {
 		t.Errorf("claiming in a solo organization = %v, %v, want it taken", got, err)
 	}
 }

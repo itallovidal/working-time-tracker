@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -102,6 +103,16 @@ func toolText(res *mcp.CallToolResult) string {
 }
 
 // wantCode confere que o erro da ferramenta traz o código.
+// firstMCPAssignee é o primeiro responsável de uma tarefa do MCP, ou um mapa vazio na tarefa livre.
+func firstMCPAssignee(task map[string]any) map[string]any {
+	list, _ := task["assignees"].([]any)
+	if len(list) == 0 {
+		return map[string]any{}
+	}
+	a, _ := list[0].(map[string]any)
+	return a
+}
+
 func wantCode(t *testing.T, text, code string) {
 	t.Helper()
 	if !strings.Contains(text, "("+code) {
@@ -197,13 +208,13 @@ func TestMCP_ListsTheTools(t *testing.T) {
 	slices.Sort(names)
 	want := []string{
 		"add_task_to_session", "claim_task", "clock_in", "clock_out", "create_label", "create_task", "find_tasks",
-		"get_active_session", "get_task", "list_labels", "list_projects", "list_tasks", "my_hours", "my_tasks",
+		"get_active_session", "get_task", "list_labels", "list_people", "list_projects", "list_tasks", "my_hours", "my_tasks",
 		"remove_session_task", "stop_session_task", "sync_project", "sync_task", "update_task", "whoami",
 	}
 	if !slices.Equal(names, want) {
 		t.Fatalf("tools = %v, want %v", names, want)
 	}
-	for _, name := range []string{"whoami", "list_projects", "list_tasks", "my_tasks", "get_task", "list_labels", "get_active_session", "my_hours", "find_tasks"} {
+	for _, name := range []string{"whoami", "list_projects", "list_tasks", "my_tasks", "get_task", "list_labels", "list_people", "get_active_session", "my_hours", "find_tasks"} {
 		if !readOnly[name] {
 			t.Errorf("%s is not marked read-only", name)
 		}
@@ -255,11 +266,11 @@ func TestMCP_Tasks(t *testing.T) {
 		!slices.Equal(toStrings(created["labels"]), []string{"bug"}) || created["description"] != "Com **Markdown**" {
 		t.Errorf("create_task = %v", created)
 	}
-	if a, _ := created["assignee"].(map[string]any); a == nil || a["is_you"] != true || a["id"] != member.id {
-		t.Errorf("assignee = %v, want the member", created["assignee"])
+	if a := firstMCPAssignee(created); a["is_you"] != true || a["id"] != member.id {
+		t.Errorf("assignees = %v, want the member", created["assignees"])
 	}
 	api := decode(t, do(e, "GET", "/api/tasks/"+taskID, "", owner.session))
-	if api["name"] != "Escrever os testes" || api["assignee_id"] != member.id {
+	if api["name"] != "Escrever os testes" || firstAssignee(api) != member.id {
 		t.Errorf("task through the API = %v", api)
 	}
 	if deadline, _ := time.Parse(time.RFC3339, api["deadline"].(string)); deadline.In(saoPaulo(t)).Format("2006-01-02 15:04") != "2026-12-01 23:59" {
@@ -271,10 +282,10 @@ func TestMCP_Tasks(t *testing.T) {
 
 	// Atualizar: só o que vem muda; o nome fica.
 	updated := callTool(t, cs, "update_task", map[string]any{
-		"task_id": taskID, "status": "awaiting_closure", "clear_deadline": true, "labels": []string{}, "assignee": "none",
+		"task_id": taskID, "status": "awaiting_closure", "clear_deadline": true, "labels": []string{}, "remove_assignees": []string{"me"},
 	})
 	if updated["name"] != "Escrever os testes" || updated["status"] != "awaiting_closure" || updated["deadline"] != "" ||
-		len(toStrings(updated["labels"])) != 0 || updated["assignee"] != nil || updated["priority"] != "high" {
+		len(toStrings(updated["labels"])) != 0 || len(updated["assignees"].([]any)) != 0 || updated["priority"] != "high" {
 		t.Errorf("update_task = %v", updated)
 	}
 	if renamed := callTool(t, cs, "update_task", map[string]any{"task_id": taskID, "name": "Testes do MCP", "description": ""}); renamed["name"] != "Testes do MCP" {
@@ -291,7 +302,7 @@ func TestMCP_Tasks(t *testing.T) {
 	// Pegar: a sem responsável vira da pessoa; a de outra pessoa, não.
 	free := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Livre"}`, owner.session))["id"].(string)
 	taken := decode(t, do(e, "POST", prj+"/tasks", `{"name":"Da dona","assignee_id":"`+owner.id+`"}`, owner.session))["id"].(string)
-	if claimed := callTool(t, cs, "claim_task", map[string]any{"task_id": free}); claimed["assignee"].(map[string]any)["is_you"] != true {
+	if claimed := callTool(t, cs, "claim_task", map[string]any{"task_id": free}); firstMCPAssignee(claimed)["is_you"] != true {
 		t.Errorf("claim_task = %v", claimed)
 	}
 	wantCode(t, toolError(t, cs, "claim_task", map[string]any{"task_id": taken}), "task.already_assigned")
@@ -317,8 +328,34 @@ func TestMCP_Tasks(t *testing.T) {
 		t.Errorf("my_tasks closed = %v", myTasks)
 	}
 	got := callTool(t, cs, "get_task", map[string]any{"task_id": taken})
-	if got["name"] != "Da dona" || got["assignee"].(map[string]any)["is_you"] != false {
+	if got["name"] != "Da dona" || firstMCPAssignee(got)["is_you"] != false {
 		t.Errorf("get_task = %v", got)
+	}
+
+	// Dividir (Decisão 31): quem não está na tarefa não entra sozinho nem bate o ponto nela; a dona, que administra o
+	// projeto, põe a pessoa, e então ela sai quando quer, mas não tira a dona.
+	wantCode(t, toolError(t, cs, "update_task", map[string]any{"task_id": taken, "add_assignees": []string{"me"}}), "task.already_assigned")
+	wantCode(t, toolError(t, cs, "clock_in", map[string]any{"task_id": taken}), "work_session.not_assignee")
+	people := callTool(t, cs, "list_people", map[string]any{"project_id": projectID})["people"].([]any)
+	var me map[string]any
+	for _, p := range people {
+		if p.(map[string]any)["is_you"] == true {
+			me = p.(map[string]any)
+		}
+	}
+	if me == nil || me["id"] != member.id || me["email"] != "membro@example.com" {
+		t.Errorf("list_people = %v, want the member among them", people)
+	}
+	share := fmt.Sprintf(`{"assignee_ids":["%s","%s"]}`, owner.id, member.id)
+	if rec := do(e, "PATCH", "/api/tasks/"+taken+"/attributes", share, owner.session); rec.Code != http.StatusOK {
+		t.Fatalf("the owner shares the task = %d: %s", rec.Code, rec.Body.String())
+	}
+	if shared := callTool(t, cs, "get_task", map[string]any{"task_id": taken}); len(shared["assignees"].([]any)) != 2 {
+		t.Errorf("shared task = %v, want two assignees", shared["assignees"])
+	}
+	wantCode(t, toolError(t, cs, "update_task", map[string]any{"task_id": taken, "remove_assignees": []string{owner.id}}), "task.remove_forbidden")
+	if left := callTool(t, cs, "update_task", map[string]any{"task_id": taken, "remove_assignees": []string{"me"}}); len(left["assignees"].([]any)) != 1 || firstMCPAssignee(left)["id"] != owner.id {
+		t.Errorf("leaving the task = %v, want only the owner left", left["assignees"])
 	}
 }
 
@@ -347,7 +384,7 @@ func TestMCP_Session(t *testing.T) {
 	if opened["open"] != true || opened["project"].(map[string]any)["name"] != "Alfa" || running(opened) != "A" {
 		t.Fatalf("clock_in = %v", opened)
 	}
-	if task := decode(t, do(e, "GET", "/api/tasks/"+a, "", owner.session)); task["status"] != "in_progress" || task["assignee_id"] != member.id {
+	if task := decode(t, do(e, "GET", "/api/tasks/"+a, "", owner.session)); task["status"] != "in_progress" || firstAssignee(task) != member.id {
 		t.Errorf("task after clock_in = %v, want in_progress and the member's", task)
 	}
 	text := toolError(t, cs, "clock_in", map[string]any{"task_id": b})

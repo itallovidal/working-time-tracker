@@ -26,7 +26,8 @@ público, atendido pelo modo solo (Decisão 20).
 - Uma estrutura organizacional: organização → projetos → times → pessoas.
 - Clock-in e clock-out como a peça central do registro de tempo, com uma sessão aberta por pessoa (desde a Decisão 27,
   uma por pessoa em cada projeto).
-- Tarefas dentro dos projetos, com prazo padrão de uma semana e um responsável só.
+- Tarefas dentro dos projetos, com prazo padrão de uma semana e um responsável só. **Hoje:** até 10 responsáveis por
+  tarefa (Decisão 31).
 - Integrações genéricas com plataformas externas, configuradas por projeto, sem prender o sistema a uma plataforma.
 - Ligar tarefas a itens externos e buscar os detalhes deles na hora.
 - Configuração por projeto: sprint, daily e weekly.
@@ -105,7 +106,9 @@ máximo um por tarefa e integração, então uma tarefa pode estar numa issue e 
 - **Tarefa sem responsável.** O responsável é opcional: a tarefa sem ninguém fica disponível, e quem bate o ponto
   nela, ou a **pega** (`POST /api/tasks/:taskId/claim`), passa a ser o responsável. As duas coisas usam o mesmo
   `UPDATE ... WHERE assignee_id IS NULL`, então de dois pedidos simultâneos só um ganha (o outro recebe `409`
-  `task.already_assigned`). Para pegar uma tarefa para si não é preciso estar num time.
+  `task.already_assigned`). Para pegar uma tarefa para si não é preciso estar num time. **Hoje:** a tarefa tem uma
+  lista de responsáveis (Decisão 31), e pegar só vale na livre: a tomada trava a linha da tarefa
+  (`SELECT ... FOR UPDATE`) e só insere a pessoa se a tarefa não tem ninguém, então continua um ganhador só.
 - **Status da tarefa.** Um enum de quatro valores (`backlog`, `in_progress`, `awaiting_closure`, `closed`). A tarefa
   nasce sempre em backlog, e a troca é livre entre os quatro, sem ordem, porque os times pulam etapas e voltam
   atrás. O status muda sozinho num lugar só: o clock-in põe a tarefa em progresso, de qualquer status (voltar a
@@ -168,8 +171,9 @@ das integrações. Os times agrupam sem duplicar dados.
 - **Tirar alguém do projeto encerra a sessão aberta dele ali**, na mesma transação, mantendo o tempo trabalhado: fora
   do projeto, a pessoa não alcança mais a rota de parar o ponto.
 
-**Hoje:** o responsável escolhido à mão precisa estar num time, menos a própria pessoa que pede e o responsável
-atual. Em dados antigos, quem estava num time sem valor não conta mais como do projeto.
+**Hoje:** quem entra na lista de responsáveis precisa estar no projeto (ter valor por hora nele), menos a própria
+pessoa que pede, e quem já está na tarefa continua. Quem pode pôr e tirar outra pessoa está na Decisão 31. Em dados
+antigos, quem estava num time sem valor não conta mais como do projeto.
 
 ### Decisão 5: Integrações genéricas
 
@@ -229,7 +233,9 @@ mudar schema, regras nem tela. Buscar na hora evita dados velhos e a estrutura d
   - **Em conflito, vence a plataforma.** Pediu-se sincronização, não uma ferramenta de merge. As etiquetas não
     conflitam: cada lado soma e tira o que fez.
   - **O responsável se liga pelo e-mail público** do usuário no GitHub, dentro da organização e do projeto. Só o
-    login ligado é mexido, então os responsáveis da issue que o sistema não reconhece ficam como estão.
+    login ligado é mexido, então os responsáveis da issue que o sistema não reconhece ficam como estão. **Hoje:** pela
+    conta da pessoa antes do e-mail (Decisão 30), e todo login ligado a alguém do projeto é um responsável da tarefa
+    (Decisão 31).
   - **Gatilhos.** O botão Sincronizar agora (uma rodada completa), a rotina de fundo (incremental, com uma rodada
     completa a cada hora, espera crescente quando o token é recusado ou o limite acaba) e um gancho no store das
     tarefas, que só anota numa fila: um único worker junta os pedidos (1,5 s) e empurra para a plataforma. Sem
@@ -1170,7 +1176,8 @@ não deveria pegá-las.
 - **O modal ao pegar:** numa tarefa ligada a uma issue, quem ainda não respondeu sobre a conta conecta ou diz que não
   tem (e não é perguntado de novo); na tarefa com a trava, só conectar libera. Conectar volta para a tarefa e termina
   de pegá-la.
-- **A tarefa continua com um responsável só.** A issue pode ter vários, e a sincronização mexe só no login ligado.
+- **A tarefa continua com um responsável só** (a Decisão 31 trouxe vários). A issue pode ter vários, e a sincronização
+  mexe só no login ligado.
 
 **Alternativas descartadas:**
 - **Um campo "usuário do GitHub" que a pessoa digita:** qualquer um digitaria o login de outra pessoa, e o login
@@ -1178,12 +1185,75 @@ não deveria pegá-las.
 - **Um endereço de retorno só para a conta da pessoa:** pediria cadastrar outra URL nos apps do GitHub e do GitLab, em
   cada ambiente.
 - **Vários responsáveis por tarefa:** os painéis, o ponto, o dinheiro e o MCP partem de um responsável só. Ficou para
-  depois.
+  depois (a Decisão 31 trouxe vários).
 
 **Consequências:** a contagem de "responsáveis sem correspondência" passa a ser de logins, e não de issues. Uma pessoa
 que só casava pelo e-mail ganha a conta na primeira rodada que a encontra. O GitHub falso dos testes devolve outra
 pessoa (`monalisa`) quando o escopo é o da conta. As regras de hoje estão em
 [overview.md](../integrations/overview.md#contas-das-pessoas).
+
+### Decisão 31: Vários responsáveis por tarefa, e o ponto só nas suas
+
+**Contexto:** a tarefa tinha um responsável só (`tasks.assignee_id`), e uma issue do GitHub ou do GitLab pode ter
+vários; a sincronização mexia só no primeiro login que casava (`issue_syncs.mapped_login`). A Decisão 30 deixou isso
+para depois. O mapeamento mostrou que o dinheiro não depende do responsável: as horas e os valores seguem a sessão de
+quem bateu o ponto. Então a mudança fica no modelo da tarefa, nas regras de quem mexe na lista, no ponto, na
+sincronização, no MCP e nas telas (issue #52).
+
+**Escolha:** a tarefa tem uma lista de responsáveis, com regras de quem entra e de quem sai.
+
+- **Uma tabela de junção:** `task_assignees (task_id, person_id)`, a aresta `Task.assignees` / `Person.assigned_tasks`,
+  como as etiquetas. No máximo 10 por tarefa, o teto do GitHub (`task.MaxAssignees`; passar dele é
+  `task.too_many_assignees`). A migração `task_assignees` copia o responsável de cada tarefa e troca, no vínculo,
+  `mapped_login` e `mapped_person_id` por `mapped` (jsonb, login → pessoa).
+- **Pegar só na tarefa livre.** Numa tarefa que já tem gente, continua o `409 task.already_assigned`.
+- **Quem põe e quem tira** (`task.Service.checkAssignees`, só em quem entra ou sai). "Admin do projeto" é quem tem
+  `collaborators.manage` nele: o administrador de projeto, o admin e o dono.
+  - Numa tarefa livre, só o admin do projeto põe outra pessoa. Os outros só a pegam para si: Pegar, criar a tarefa já
+    para si ou bater o ponto.
+  - Numa tarefa com gente, um responsável acrescenta outras pessoas ("dividir"), e o admin do projeto também.
+  - O responsável só sai ele mesmo; tirar outra pessoa é do admin do projeto. Quando o último sai, a tarefa volta a ser
+    livre.
+  - Sem poder, `403 task.share_forbidden` (pôr) ou `403 task.remove_forbidden` (tirar).
+  - Os outros campos da tarefa (nome, status, prazo, etiquetas) seguem abertos a todo o projeto: só a lista ganhou
+    regra.
+- **O ponto só nas suas tarefas.** O clock-in e pôr uma tarefa numa sessão, aberta ou encerrada, só valem numa tarefa de
+  que a pessoa é responsável, ou numa livre, que passa a ser dela (com a trava de contas antes; numa sessão encerrada, a
+  livre entra sem mudar de dono). Fora disso, `403 work_session.not_assignee`. Cada responsável bate o seu ponto, junto
+  ou em horas diferentes, e o dinheiro segue a sessão, como antes.
+- **Sair com o ponto aberto para o trecho.** Quem sai da tarefa, ou é tirado dela (pela tela, pela API, pelo MCP ou
+  pela sincronização), com um trecho aberto nela tem esse trecho parado na hora; se era a única tarefa rodando na
+  sessão, a sessão fecha (clock-out). As outras tarefas da sessão seguem. É o `work_session.Service.StopTaskFor`, ligado
+  ao store das tarefas como `task.WorkStopper`.
+- **A trava vale para cada pessoa que entra** (`required_accounts`, Decisão 30). Ligá-la não tira ninguém, e a
+  sincronização passa por cima dela, como antes. O modo solo não muda: a pessoa é uma só.
+- **A tomada da tarefa livre** trava a linha da tarefa na transação (`SELECT ... FOR UPDATE`) e só insere a pessoa se a
+  tarefa não tem ninguém: de dois pedidos juntos, só um leva. O ponto que perde a disputa recebe `not_assignee`, e um
+  ponto recusado depois da tomada devolve a tarefa.
+- **A sincronização liga todos.** Todo login da issue ligado a uma pessoa do projeto vira responsável, e os logins sem
+  pessoa ficam só na issue. A comparação é pessoa a pessoa contra o último acordo (os pares de `mapped`): tirar alguém
+  de um lado tira do outro, a pessoa nova na tarefa leva o login dela à issue, e o mesmo elemento mudado dos dois lados
+  fica como a issue o tem.
+- **O GitLab grátis** guarda um responsável por issue. Vão todos os logins; quando o GitLab guarda menos, a tarefa fica
+  com todos, o vínculo ganha o aviso `issue_sync.single_assignee` e a mesma mudança não é tentada de novo.
+
+**Alternativas descartadas:**
+- **Um Pegar que acrescenta a pessoa numa tarefa com gente:** qualquer um entraria na tarefa dos outros sem que ninguém
+  dela pedisse. Dividir é de quem está na tarefa ou de quem administra o projeto.
+- **Um ponto na tarefa de outra pessoa que a acrescenta (ou que só é aceito, como era):** o ponto viraria um jeito de
+  entrar na tarefa por fora das regras acima, e as horas ficariam numa tarefa de que a pessoa não é responsável.
+- **A sincronização seguir com um login só:** a issue com duas pessoas daqui mostraria uma, e tirar a outra de um lado
+  não chegaria ao outro.
+- **Recusar a segunda pessoa numa tarefa ligada ao GitLab:** prenderia a tarefa ao plano do GitLab de cada um. A tarefa
+  fica com todos, e o aviso diz que a issue ficou com um.
+
+**Consequências:** a tarefa na API troca `assignee_id` e `assignee` por `assignees` (`[{id, name, email}]`, por nome),
+e a criação e as duas edições aceitam `assignee_ids`, a lista inteira, com o `assignee_id` como atalho de uma pessoa. O
+filtro `?assignee_id=` passa a ser "está entre os responsáveis", então Minhas tarefas mostra a tarefa a cada um. No MCP,
+`assignees` substitui `assignee`, o `update_task` ganha `add_assignees` e `remove_assignees`, e há o `list_people`. O
+cartão da integração conta todo login sem pessoa, e não só os das issues sem ninguém ligado. As regras de hoje estão em
+[permissions.md](../product/permissions.md#responsáveis-da-tarefa) e em
+[overview.md](../integrations/overview.md#os-responsáveis).
 
 ## Riscos e trade-offs
 

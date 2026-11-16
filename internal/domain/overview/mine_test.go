@@ -34,7 +34,7 @@ func at(t *testing.T, s string) time.Time {
 func (f *fixture) mineTask(projectID string, assignee uuid.UUID, name string, status enttask.Status, priority enttask.Priority, deadline *time.Time, created time.Time) uuid.UUID {
 	f.t.Helper()
 	q := testClient.Task.Create().
-		SetProjectID(uuid.MustParse(projectID)).SetName(name).SetAssigneeID(assignee).
+		SetProjectID(uuid.MustParse(projectID)).SetName(name).AddAssigneeIDs(assignee).
 		SetStatus(status).SetPriority(priority).SetCreatedAt(created)
 	if deadline != nil {
 		q = q.SetDeadline(*deadline)

@@ -186,24 +186,20 @@ func init() {
 	issuesyncDescBody := issuesyncFields[7].Descriptor()
 	// issuesync.DefaultBody holds the default value on creation for the body field.
 	issuesync.DefaultBody = issuesyncDescBody.Default.(string)
-	// issuesyncDescMappedLogin is the schema descriptor for mapped_login field.
-	issuesyncDescMappedLogin := issuesyncFields[10].Descriptor()
-	// issuesync.DefaultMappedLogin holds the default value on creation for the mapped_login field.
-	issuesync.DefaultMappedLogin = issuesyncDescMappedLogin.Default.(string)
 	// issuesyncDescStuckSig is the schema descriptor for stuck_sig field.
-	issuesyncDescStuckSig := issuesyncFields[13].Descriptor()
+	issuesyncDescStuckSig := issuesyncFields[12].Descriptor()
 	// issuesync.DefaultStuckSig holds the default value on creation for the stuck_sig field.
 	issuesync.DefaultStuckSig = issuesyncDescStuckSig.Default.(string)
 	// issuesyncDescLastError is the schema descriptor for last_error field.
-	issuesyncDescLastError := issuesyncFields[14].Descriptor()
+	issuesyncDescLastError := issuesyncFields[13].Descriptor()
 	// issuesync.DefaultLastError holds the default value on creation for the last_error field.
 	issuesync.DefaultLastError = issuesyncDescLastError.Default.(string)
 	// issuesyncDescSyncedAt is the schema descriptor for synced_at field.
-	issuesyncDescSyncedAt := issuesyncFields[15].Descriptor()
+	issuesyncDescSyncedAt := issuesyncFields[14].Descriptor()
 	// issuesync.DefaultSyncedAt holds the default value on creation for the synced_at field.
 	issuesync.DefaultSyncedAt = issuesyncDescSyncedAt.Default.(func() time.Time)
 	// issuesyncDescCreatedAt is the schema descriptor for created_at field.
-	issuesyncDescCreatedAt := issuesyncFields[16].Descriptor()
+	issuesyncDescCreatedAt := issuesyncFields[15].Descriptor()
 	// issuesync.DefaultCreatedAt holds the default value on creation for the created_at field.
 	issuesync.DefaultCreatedAt = issuesyncDescCreatedAt.Default.(func() time.Time)
 	// issuesyncDescID is the schema descriptor for id field.
@@ -419,7 +415,7 @@ func init() {
 	taskFields := schema.Task{}.Fields()
 	_ = taskFields
 	// taskDescCreatedAt is the schema descriptor for created_at field.
-	taskDescCreatedAt := taskFields[9].Descriptor()
+	taskDescCreatedAt := taskFields[8].Descriptor()
 	// task.DefaultCreatedAt holds the default value on creation for the created_at field.
 	task.DefaultCreatedAt = taskDescCreatedAt.Default.(func() time.Time)
 	// taskDescID is the schema descriptor for id field.

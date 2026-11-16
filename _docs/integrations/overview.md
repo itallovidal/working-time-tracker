@@ -69,7 +69,7 @@ Cada tipo se descreve num `Descriptor` (`internal/adapter/interface.go`). A tela
 | `Metadata` | Os campos do tipo. Cada um pode ser `Required`, `Summary` (o que identifica a conexão e o cartão mostra), `Internal` (a conexão o guarda, a tela não o mostra e a edição mantém o valor guardado), `Hidden` (a tela o preenche e não o mostra), ter um `Picker` (`select`, a lista fechada dos quadros, ou `datalist`, o campo com sugestões de repositório) e um `NameKey` (o campo com o nome legível do que se escolheu) |
 | `ItemNumeric` | O id do item é um número (a issue). Num tipo assim, um id que não é número não é de item nenhum |
 | `Sync` | O tipo implementa `IssueSyncer`. Só ele ganha a caixa da sincronização |
-| `Caps` | O que a sincronização faz além do básico: `deadline` (o prazo da tarefa e a data de entrega do item se espelham), `assignee` (o responsável se liga pela conta da pessoa e, sem ela, pelo e-mail público; ver [contas das pessoas](#contas-das-pessoas)), `server_since` (a plataforma filtra por data, então a rodada de fundo pode ser incremental), `auto_publish` (a tarefa criada aqui vira item sozinha) |
+| `Caps` | O que a sincronização faz além do básico: `deadline` (o prazo da tarefa e a data de entrega do item se espelham), `assignee` (os responsáveis se ligam pela conta de cada pessoa e, sem ela, pelo e-mail público; ver [os responsáveis](#os-responsáveis)), `server_since` (a plataforma filtra por data, então a rodada de fundo pode ser incremental), `auto_publish` (a tarefa criada aqui vira item sozinha) |
 | `ComingSoon` | O tipo existe mas não se oferece: a tela o mostra desabilitado com o selo "Em breve", e o `POST` responde `400` `integration.type_coming_soon`. As integrações que já existem seguem valendo. Nenhum tipo está assim hoje (o GitLab saiu na Sprint 107) |
 | `Configured` | Preenchido pela página: o servidor tem o app de autorização daquele tipo configurado |
 
@@ -122,10 +122,37 @@ tarefa **L** aqui.
   reaberto tira a tarefa de Fechada para backlog, e uma tarefa aberta (em progresso, aguardando fechamento) não muda.
 - **Comparação.** Finais de linha do Windows e espaços nas pontas não contam como mudança. O título é cortado nos 255
   caracteres do nome da tarefa. O prazo é comparado ao segundo, em UTC.
+- **Responsáveis** (GitHub e GitLab): pessoa a pessoa, contra os pares do acordo (ver
+  [os responsáveis](#os-responsáveis)).
 - **Mudança descartada.** Quando a plataforma responde `200` sem gravar o que se mandou, a assinatura da tentativa fica
   guardada, e a mesma mudança não é repetida a cada rodada. Só uma mudança nova tenta de novo.
 
 Prioridade, horas e os status Em progresso e Aguardando fechamento ficam só aqui, em todas as plataformas.
+
+### Os responsáveis
+
+No GitHub e no GitLab (os tipos com `assignee`), todo login da issue que se liga a uma pessoa do projeto (ver
+[contas das pessoas](#contas-das-pessoas)) é um responsável da tarefa (Decisão 31). Os logins que não se ligam a ninguém
+ficam só na issue, sem mexer, nos dois sentidos. O snapshot guarda todos os logins da issue (`assignee_logins`)
+e os pares login → pessoa do acordo (`mapped`), e a comparação é pessoa a pessoa:
+
+| O que mudou desde o acordo | O que acontece |
+|---|---|
+| A issue tirou um login ligado | A pessoa sai da tarefa; com o ponto aberto nela, o trecho dela para |
+| A tarefa tirou uma pessoa | O login dela sai da issue |
+| Um login sem pessoa passa a se ligar a alguém (entrou na issue, ou a pessoa conectou a conta ou publicou o e-mail depois) | A pessoa entra na tarefa |
+| Uma pessoa nova na tarefa | O login dela entra na issue; sem login, o aviso `issue_sync.no_login` é só dela, e o resto segue |
+| O mesmo elemento mudou dos dois lados | Fica como a issue o tem |
+
+- **Importar** traz todos os logins ligados, **adotar** um item ligado à mão soma as duas listas, e **publicar** manda o
+  login de cada responsável.
+- A sincronização passa por cima das regras de quem põe e tira pessoas e da trava de contas (`required_accounts`): o que
+  vem da issue é aceito como está.
+- **A plataforma que guarda menos** (o GitLab grátis, com um responsável por issue): a tarefa fica com todos, o vínculo
+  ganha o aviso `issue_sync.single_assignee`, e a mesma mudança não é tentada de novo. O snapshot só guarda os pares
+  cujo login ficou mesmo na issue, para a rodada seguinte não ler que a issue tirou os outros. Ver
+  [GitLab](gitlab.md#responsáveis).
+- O Trello não liga responsável ([Trello](trello.md)).
 
 ### Quando roda
 
@@ -217,14 +244,15 @@ O cartão da integração mostra a última rodada, quantos logins de responsáve
 | `issue_sync.push_discarded` | A plataforma respondeu `200` sem gravar (sem permissão para etiquetas ou responsáveis) |
 | `issue_sync.push_rejected` | A plataforma recusou a mudança (um título grande demais, uma etiqueta inválida) |
 | `issue_sync.label_refused` | O token não pode criar etiquetas no alvo |
-| `issue_sync.no_login` | O responsável escolhido aqui não tem conta ligada nem usuário na plataforma que se ache pelo e-mail |
+| `issue_sync.single_assignee` | A issue ficou com só parte dos responsáveis (o GitLab grátis aceita um por issue); a tarefa continua com todos |
+| `issue_sync.no_login` | Um responsável escolhido aqui não tem conta ligada nem usuário na plataforma que se ache pelo e-mail; os outros seguem |
 
 Os erros que param a rodada aparecem com o código deles, como `integration.invalid_token` ou
 `integration.rate_limited`. A lista completa está em [erros](../api/errors.md).
 
 ### Contas das pessoas
 
-No GitHub e no GitLab, o responsável do item se liga a uma pessoa daqui pela **conta** dela na plataforma
+No GitHub e no GitLab, cada responsável do item se liga a uma pessoa daqui pela **conta** dela na plataforma
 (`person_accounts`, Decisão 30): o login, o e-mail que a plataforma deu e de onde veio o vínculo. Uma conta por pessoa
 em cada plataforma, e um login liga a uma pessoa só dentro da organização.
 
@@ -243,9 +271,9 @@ em cada plataforma, e um login liga a uma pessoa só dentro da organização.
   `?account_error=<código>`, com os parâmetros do erro em `account_error_<nome>`.
 - **A rodada** procura o login na tabela antes do e-mail, e só vale para quem está no projeto. Quem disse que não tem
   conta não é procurado na plataforma (fica o aviso `issue_sync.no_login`). Quem casa pelo e-mail ganha a conta.
-- **A trava da tarefa** (`required_accounts`): a tarefa pode exigir que o responsável tenha conta ligada no GitHub, no
-  GitLab ou nos dois. Ela vale ao pegar, ao escolher o responsável e ao bater o ponto numa tarefa livre
-  (`task.account_required`), e não tira quem já é o responsável. A tarefa importada de um item do GitHub ou do GitLab
+- **A trava da tarefa** (`required_accounts`): a tarefa pode exigir que cada responsável tenha conta ligada no GitHub,
+  no GitLab ou nos dois. Ela vale ao pegar, para cada pessoa que entra na lista de responsáveis e ao bater o ponto numa
+  tarefa livre (`task.account_required`), e não tira quem já está. A tarefa importada de um item do GitHub ou do GitLab
   nasce com a plataforma dele; quem edita a tarefa tira a marca. "Não tenho conta" não conta como conta. **No modo
   solo a trava não vale:** a pessoa é uma só, a tarefa importada nasce sem ela, a conferência passa e a tela não mostra
   a caixa.
@@ -275,7 +303,7 @@ inteiro (`issue_sync.push_rejected` no cartão dele).
 
 `POST /api/tasks/:taskId/link-external-item` (`{"integration_id", "external_item_id", "external_item_url"}`) cria um
 vínculo `pending`. A primeira rodada em que o item está **aberto** o adota: a plataforma vence no nome e na
-descrição, as etiquetas dos dois lados se somam e o responsável da tarefa fica como está. Um item já fechado não é
+descrição, e as etiquetas e os responsáveis dos dois lados se somam. Um item já fechado não é
 adotado. A rota responde `409` `task.already_linked` se a tarefa já tem item nesta integração, e `409`
 `task.item_taken` se o item é de outra tarefa.
 
@@ -288,7 +316,7 @@ vínculo que já tinha sido adotado vira item descartado. O que nunca foi adotad
 
 - o nome e a descrição;
 - as etiquetas, criadas no alvo se faltarem;
-- o responsável, onde o tipo liga responsável;
+- os responsáveis, pelo login de cada um, onde o tipo liga responsável;
 - o prazo, onde o tipo tem data de entrega.
 
 Daí em diante os dois ficam sincronizados. Pede a integração ativa, com a sincronização ligada e um token que escreve
@@ -297,7 +325,7 @@ no alvo. A resposta é `200` `{"task", "problem"}`. Os erros são:
 - `409` `task.already_linked`: a tarefa já tem item **nesta** integração (nas outras ela pode ser publicada);
 - `integration.sync_off`;
 - `task.integration_other_project`;
-- `issue_sync.publish_read_only`: sem escrita, a plataforma abriria o item sem as etiquetas e o responsável;
+- `issue_sync.publish_read_only`: sem escrita, a plataforma abriria o item sem as etiquetas e os responsáveis;
 - `integration.issues_disabled` e `integration.trello_no_list`.
 
 A tela chama a rota em dois lugares:

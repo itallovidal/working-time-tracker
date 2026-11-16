@@ -52,7 +52,7 @@ func noProblem(t *testing.T, r task.RemoteResult, outcome string) {
 func TestRemove_DeletesTheIssueAndArchivesTheCard(t *testing.T) {
 	d := newDualEnv(t)
 	due := time.Date(2026, 12, 1, 12, 0, 0, 0, time.UTC)
-	tk, err := d.taskSvc.CreateAs("", d.project, "Vai embora", "descrição", "", &due, task.Attrs{})
+	tk, err := d.taskSvc.CreateAs(task.Actor{}, d.project, "Vai embora", "descrição", "", &due, task.Attrs{})
 	must(t, err)
 	for _, it := range []*integration.Integration{d.ghIt, d.trIt} {
 		_, err := d.syncer.Publish(context.Background(), tk.ID, it.ID)
@@ -150,7 +150,7 @@ func TestRemove_OnlyTheTickedPlatform(t *testing.T) {
 // Uma integração a que a tarefa não está ligada é ignorada, sem erro.
 func TestRemove_IgnoresIntegrationsTheTaskIsNotIn(t *testing.T) {
 	d := newDualEnv(t)
-	tk, err := d.taskSvc.CreateAs("", d.project, "Só no GitHub", "", "", nil, task.Attrs{})
+	tk, err := d.taskSvc.CreateAs(task.Actor{}, d.project, "Só no GitHub", "", "", nil, task.Attrs{})
 	must(t, err)
 	_, err = d.syncer.Publish(context.Background(), tk.ID, d.ghIt.ID)
 	must(t, err)

@@ -216,6 +216,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `issue_sync.read_only` | 400 | — | `o token não escreve neste repositório ou quadro: os itens só vêm para cá, e as mudanças daqui não saem` | `the token cannot write to this repository or board: items only come here, and changes made here do not go out` |
 | `issue_sync.remove_only_closed` | 400 | — | `a plataforma não deixou apagar o item (a conta conectada precisa ser admin do repositório no GitHub, ou Owner do projeto no GitLab), então ele só foi fechado` | `the platform did not let the item be deleted (the connected account must be a repository admin on GitHub, or a project Owner on GitLab), so it was only closed` |
 | `issue_sync.remove_read_only` | 400 | — | `o token desta integração não escreve no repositório ou quadro, então o item continua lá` | `the token of this integration cannot write to the repository or board, so the item is still there` |
+| `issue_sync.single_assignee` | 400 | — | `a issue ficou com um responsável só (o GitLab grátis aceita um por issue): aqui a tarefa continua com todos` | `the issue kept only one assignee (free GitLab allows one per issue): the task here keeps them all` |
 
 ### label
 
@@ -231,7 +232,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `mcp.find_criteria_required` | 400 | — | `diga o que procurar: uma issue, um texto ou os dois` | `say what to look for: an issue, a query or both` |
-| `mcp.invalid_assignee` | 400 | — | `o responsável é me (você) ou none (ninguém)` | `the assignee is me (you) or none (nobody)` |
+| `mcp.invalid_assignee` | 400 | — | `cada pessoa é me (você) ou o id dela (list_people)` | `each person is me (you) or their id (list_people)` |
 | `mcp.invalid_date` | 400 | `field` | `data inválida em {{.field}}: use AAAA-MM-DD` | `invalid date in {{.field}}: use YYYY-MM-DD` |
 | `mcp.invalid_issue` | 400 | — | `use a URL de uma issue do GitHub ou do GitLab ou de um cartão do Trello, ou dono/repositório#12` | `use the URL of a GitHub or GitLab issue or a Trello card, or owner/repo#12` |
 | `mcp.labels_conflict` | 400 | — | `use labels para trocar todas, ou add_labels e remove_labels para mudar algumas, não os dois` | `use labels to replace them all, or add_labels and remove_labels to change some, not both` |
@@ -372,7 +373,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | Código | Status | Parâmetros | pt-BR | en |
 |---|---|---|---|---|
 | `task.account_required` | 409 | `names` | `esta tarefa é só para quem tem conta no {{.names}} ligada no perfil (Contas conectadas)` | `this task is only for people with a {{.names}} account linked on their profile (Connected accounts)` |
-| `task.already_assigned` | 409 | — | `esta tarefa já tem responsável` | `this task already has an assignee` |
+| `task.already_assigned` | 409 | — | `esta tarefa já tem responsável: peça a quem está nela para acrescentar você` | `this task already has an assignee: ask someone on it to add you` |
 | `task.already_linked` | 409 | — | `a tarefa já está ligada a um item desta integração` | `the task is already linked to an item of this integration` |
 | `task.assignee_not_in_team` | 400 | — | `o responsável precisa estar neste projeto` | `the assignee must be on this project` |
 | `task.description_too_long` | 400 | `max` | `a descrição aceita até {{.max}} caracteres` | `the description accepts up to {{.max}} characters` |
@@ -397,6 +398,9 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `task.no_external_item` | 400 | — | `a tarefa não tem item externo vinculado` | `the task has no linked external item` |
 | `task.not_found` | 404 | — | `tarefa não encontrada` | `task not found` |
 | `task.query_too_long` | 400 | `max`, `field` | `{{.field}} aceita até {{.max}} caracteres` | `{{.field}} accepts up to {{.max}} characters` |
+| `task.remove_forbidden` | 403 | — | `só quem administra o projeto tira outra pessoa da tarefa; você pode sair dela` | `only a project admin can remove someone else from the task; you can leave it` |
+| `task.share_forbidden` | 403 | — | `só quem é responsável pela tarefa, ou administra o projeto, põe outra pessoa nela` | `only an assignee of the task, or a project admin, can add someone else to it` |
+| `task.too_many_assignees` | 400 | `max` | `uma tarefa tem no máximo {{.max}} responsáveis` | `a task has at most {{.max}} assignees` |
 
 ### team
 
@@ -420,6 +424,7 @@ texto mostra `errors.unknown`. Outro cliente da API pode ter a própria tabela d
 | `work_session.invalid_task_filter` | 400 | — | `tarefa inválida (task_id)` | `invalid task (task_id)` |
 | `work_session.last_task` | 400 | — | `a sessão precisa ficar com ao menos uma tarefa; enquanto aberta, ao menos uma em andamento` | `the session must keep at least one task; while it is open, at least one still in progress` |
 | `work_session.no_rate` | 400 | — | `esta pessoa ainda não tem valor por hora neste projeto; um admin precisa definir na aba Colaboradores antes do ponto` | `this person has no hourly rate on this project yet; an admin must set one on the Collaborators tab before clocking in` |
+| `work_session.not_assignee` | 403 | — | `você só bate o ponto nas tarefas de que é responsável; peça a quem está nesta para acrescentar você` | `you can only clock in on tasks you are assigned to; ask someone on this one to add you` |
 | `work_session.not_found` | 404 | — | `sessão não encontrada` | `session not found` |
 | `work_session.not_open` | 400 | — | `não há ponto aberto para esta pessoa neste projeto` | `this person has no open clock-in on this project` |
 | `work_session.not_yours` | 403 | — | `só quem bateu o ponto, ou um admin, pode mexer nas tarefas desta sessão` | `only the person who clocked in, or an admin, can change the tasks of this session` |
